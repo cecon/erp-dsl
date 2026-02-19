@@ -10,7 +10,7 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../services/api';
-import { getComponent } from '../engine/ComponentRegistry';
+import { getComponent } from '../../core/engine/ComponentRegistry';
 import { useThemeStore } from '../../state/themeStore';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

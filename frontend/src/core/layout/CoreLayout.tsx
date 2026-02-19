@@ -1,8 +1,8 @@
 import { AppShell } from '@mantine/core';
 import { useEffect } from 'react';
-import { Header } from './Header';
-import { Sidebar } from './Sidebar';
-import { ThemeDrawer } from './ThemeDrawer';
+import { Header } from '../../components/layout/Header';
+import { Sidebar } from '../../components/layout/Sidebar';
+import { ThemeDrawer } from '../../components/layout/ThemeDrawer';
 import { useThemeStore } from '../../state/themeStore';
 
 interface CoreLayoutProps {

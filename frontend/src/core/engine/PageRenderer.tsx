@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../services/api';
 import { DynamicForm } from './DynamicForm';
-import { EnterpriseGrid } from './EnterpriseGrid';
+import { EnterpriseGrid } from '../../components/grid/EnterpriseGrid';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
