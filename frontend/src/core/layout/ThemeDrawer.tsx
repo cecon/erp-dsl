@@ -27,9 +27,9 @@ export function ThemeDrawer() {
   const themeStore = useThemeStore();
   const { setColorScheme: setMantineScheme } = useMantineColorScheme();
 
-  const { data: schema } = useQuery({
+  const { data } = useQuery({
     queryKey: ['page', '_theme_config'],
-    queryFn: () => api.get('/api/pages/_theme_config').then((r) => r.data),
+    queryFn: () => api.get('/pages/_theme_config').then((r) => r.data),
   });
 
   /**
@@ -66,7 +66,8 @@ export function ThemeDrawer() {
     handlers[id]?.(value);
   };
 
-  const components = schema?.schema_data?.components ?? [];
+  const schema = data?.schema;
+  const components = schema?.components ?? [];
 
   return (
     <>
@@ -89,7 +90,7 @@ export function ThemeDrawer() {
       <Drawer
         opened={opened}
         onClose={close}
-        title={schema?.schema_data?.title ?? 'Theme Settings'}
+        title={data?.schema?.title ?? 'Theme Settings'}
         position="right"
         size="xs"
         overlayProps={{ backgroundOpacity: 0.4, blur: 2 }}

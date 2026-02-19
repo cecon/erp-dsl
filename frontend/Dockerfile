@@ -10,10 +10,9 @@ RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 COPY . .
 RUN pnpm build
 
-# Serve with lightweight server
-FROM node:20-slim AS production
-RUN npm install -g serve
-WORKDIR /app
-COPY --from=build /app/dist ./dist
+# Serve with nginx (includes reverse proxy for /api)
+FROM nginx:alpine AS production
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 5174
-CMD ["serve", "-s", "dist", "-l", "5174"]
+CMD ["nginx", "-g", "daemon off;"]

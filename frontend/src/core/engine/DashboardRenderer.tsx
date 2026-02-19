@@ -37,14 +37,14 @@ export function DashboardRenderer() {
     );
   }
 
-  const schema = data.schema;
+  const schema = data?.schema;
   const components = schema?.components ?? [];
 
   return (
     <Stack gap="xl">
       <div>
-        <div className="page-header-title">{schema.title || 'Dashboard'}</div>
-        {schema.description && (
+        <div className="page-header-title">{schema?.title || 'Dashboard'}</div>
+        {schema?.description && (
           <div className="page-header-subtitle">{schema.description}</div>
         )}
       </div>
