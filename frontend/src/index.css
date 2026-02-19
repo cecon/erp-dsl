@@ -215,7 +215,8 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  opacity: 0.8;
+  color: var(--mantine-primary-color-filled);
+  opacity: 0.85;
   flex-shrink: 0;
 }
 
@@ -576,6 +577,7 @@ body {
 
 .stat-card-icon {
   font-size: 18px;
+  color: var(--mantine-primary-color-filled);
   opacity: 0.9;
 }
 
@@ -643,6 +645,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--mantine-primary-color-filled);
   background: rgba(255, 255, 255, 0.04);
   border-radius: 6px;
 }
@@ -697,6 +700,7 @@ body {
 
 .quick-action-icon {
   font-size: 22px;
+  color: var(--mantine-primary-color-filled);
 }
 
 .quick-action-label {
