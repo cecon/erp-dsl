@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+venv/
+.venv/
+*.db
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Gemini
+.gemini/

@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: erpdsl
+      POSTGRES_PASSWORD: erpdsl
+      POSTGRES_DB: erpdsl
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erpdsl"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      ERP_DATABASE_URL: postgresql://erpdsl:erpdsl@postgres:5432/erpdsl
+      ERP_JWT_SECRET: super-secret-change-in-prod
+      ERP_CORS_ORIGINS: '["http://localhost:5174"]'
+      PYTHONPATH: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5174:5174"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

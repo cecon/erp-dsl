@@ -1,0 +1,214 @@
+{
+  "folders": [
+    {
+      "name": "🖥️ frontend",
+      "path": "frontend"
+    },
+    {
+      "name": "⚙️ backend",
+      "path": "backend"
+    },
+    {
+      "name": "📁 root",
+      "path": "."
+    }
+  ],
+  "settings": {
+    // ── TypeScript ──────────────────────────────────────────
+    "typescript.tsdk": "frontend/node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+
+    // ── Python ──────────────────────────────────────────────
+    "python.defaultInterpreterPath": "${workspaceFolder:⚙️ backend}/.venv/bin/python",
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticSeverityOverrides": {
+      "reportMissingImports": "warning"
+    },
+
+    // ── Editor ──────────────────────────────────────────────
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.defaultFormatter": null,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+
+    // ── Language-specific ───────────────────────────────────
+    "[typescript]": {
+      "editor.defaultFormatter": "vscode.typescript-language-features",
+      "editor.tabSize": 2
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "vscode.typescript-language-features",
+      "editor.tabSize": 2
+    },
+    "[javascript]": {
+      "editor.tabSize": 2
+    },
+    "[json]": {
+      "editor.tabSize": 2
+    },
+    "[python]": {
+      "editor.tabSize": 4,
+      "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "[css]": {
+      "editor.tabSize": 2
+    },
+    "[html]": {
+      "editor.tabSize": 2
+    },
+
+    // ── File Associations ───────────────────────────────────
+    "files.associations": {
+      "*.css": "css"
+    },
+
+    // ── Search / Explorer ───────────────────────────────────
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/.pytest_cache": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/.venv": true,
+      "**/pnpm-lock.yaml": true,
+      "**/__pycache__": true
+    },
+
+    // ── Emmet ───────────────────────────────────────────────
+    "emmet.includeLanguages": {
+      "typescriptreact": "html"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.black-formatter",
+      "ms-python.pylint",
+      "dbaeumer.vscode-eslint",
+      "bradlc.vscode-tailwindcss",
+      "esbenp.prettier-vscode",
+      "formulahendry.auto-rename-tag",
+      "christian-kohler.path-intellisense",
+      "ms-azuretools.vscode-docker"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Backend: FastAPI",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": ["src.app:app", "--reload", "--port", "8000"],
+        "cwd": "${workspaceFolder:⚙️ backend}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder:⚙️ backend}",
+          "ERP_DATABASE_URL": "postgresql://erpdsl:erpdsl@localhost:5433/erpdsl",
+          "ERP_JWT_SECRET": "super-secret-change-in-prod",
+          "ERP_CORS_ORIGINS": "[\"http://localhost:5174\"]"
+        },
+        "console": "integratedTerminal"
+      },
+      {
+        "name": "Frontend: Vite Dev",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:5174",
+        "webRoot": "${workspaceFolder:🖥️ frontend}/src"
+      }
+    ],
+    "compounds": [
+      {
+        "name": "Full Stack",
+        "configurations": ["Backend: FastAPI", "Frontend: Vite Dev"]
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Frontend: Dev Server",
+        "type": "shell",
+        "command": "pnpm dev",
+        "options": {
+          "cwd": "${workspaceFolder:🖥️ frontend}"
+        },
+        "isBackground": true,
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Frontend: Build",
+        "type": "shell",
+        "command": "pnpm run build",
+        "options": {
+          "cwd": "${workspaceFolder:🖥️ frontend}"
+        },
+        "group": "build",
+        "problemMatcher": ["$tsc"]
+      },
+      {
+        "label": "Frontend: Type Check",
+        "type": "shell",
+        "command": "npx tsc --noEmit",
+        "options": {
+          "cwd": "${workspaceFolder:🖥️ frontend}"
+        },
+        "group": "test",
+        "problemMatcher": ["$tsc"]
+      },
+      {
+        "label": "Backend: Run",
+        "type": "shell",
+        "command": "python -m uvicorn src.app:app --reload --port 8000",
+        "options": {
+          "cwd": "${workspaceFolder:⚙️ backend}",
+          "env": {
+            "PYTHONPATH": "${workspaceFolder:⚙️ backend}",
+            "ERP_DATABASE_URL": "postgresql://erpdsl:erpdsl@localhost:5433/erpdsl",
+            "ERP_JWT_SECRET": "super-secret-change-in-prod",
+            "ERP_CORS_ORIGINS": "[\"http://localhost:5174\"]"
+          }
+        },
+        "isBackground": true,
+        "group": "build",
+        "problemMatcher": []
+      },
+      {
+        "label": "Docker: Up",
+        "type": "shell",
+        "command": "docker compose up -d",
+        "options": {
+          "cwd": "${workspaceFolder:📁 root}"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Docker: Down",
+        "type": "shell",
+        "command": "docker compose down",
+        "options": {
+          "cwd": "${workspaceFolder:📁 root}"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "DB: Migrate",
+        "type": "shell",
+        "command": "alembic upgrade head",
+        "options": {
+          "cwd": "${workspaceFolder:⚙️ backend}"
+        },
+        "problemMatcher": []
+      }
+    ]
+  }
+}
