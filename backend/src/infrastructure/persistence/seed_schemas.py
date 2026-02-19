@@ -15,6 +15,11 @@ PRODUCTS_PAGE_SCHEMA: dict[str, Any] = {
     "title": "Products",
     "description": "CRUD page for product management",
     "layout": "grid",
+    "dataSource": {
+        "endpoint": "/products",
+        "method": "GET",
+        "paginationParams": {"offset": "offset", "limit": "limit"},
+    },
     "components": [
         {
             "id": "product-form",

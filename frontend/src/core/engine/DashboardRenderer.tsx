@@ -1,3 +1,4 @@
+import { type ComponentType } from 'react';
 import { Loader, Stack, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../services/api';
@@ -8,11 +9,23 @@ import { QuickActions } from '../../components/dashboard/QuickActions';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
+ * Dashboard widget registry.
+ *
+ * Maps DSL component type strings to widget components.
+ * To add a new widget type, register it here.
+ */
+const dashboardRegistry: Record<string, ComponentType<any>> = {
+  stats_grid: StatsGrid,
+  activity_feed: ActivityFeed,
+  quick_actions: QuickActions,
+};
+
+/**
  * Renders the dashboard page from a DSL schema.
  *
  * Fetches the 'dashboard' page schema and maps each component
- * to the corresponding dashboard widget. No hardcoded data —
- * everything comes from the schema.
+ * to the corresponding widget via the dashboardRegistry.
+ * No hardcoded data or switch/case — everything is schema + registry.
  */
 export function DashboardRenderer() {
   const { data, isLoading, error } = useQuery({
@@ -50,32 +63,15 @@ export function DashboardRenderer() {
       </div>
 
       {components.map((comp: any) => {
-        switch (comp.type) {
-          case 'stats_grid':
-            return <StatsGrid key={comp.id} components={comp.components ?? []} />;
-          case 'activity_feed':
-            return (
-              <ActivityFeed
-                key={comp.id}
-                label={comp.label}
-                items={comp.items ?? []}
-              />
-            );
-          case 'quick_actions':
-            return (
-              <QuickActions
-                key={comp.id}
-                label={comp.label}
-                items={comp.items ?? []}
-              />
-            );
-          default:
-            return (
-              <Text key={comp.id} c="red" size="sm">
-                Unknown dashboard component: {comp.type}
-              </Text>
-            );
+        const Component = dashboardRegistry[comp.type];
+        if (!Component) {
+          return (
+            <Text key={comp.id} c="red" size="sm">
+              Unknown dashboard component: {comp.type}
+            </Text>
+          );
         }
+        return <Component key={comp.id} {...comp} />;
       })}
     </Stack>
   );
