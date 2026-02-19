@@ -1,13 +1,7 @@
 import { useNavigate } from 'react-router-dom';
+import { getIcon } from '../Icons';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-const ACTION_ICONS: Record<string, string> = {
-  add_box: '➕',
-  receipt_long: '🧾',
-  person_add: '👤',
-  analytics: '📊',
-};
 
 interface QuickAction {
   id: string;
@@ -48,7 +42,7 @@ export function QuickActions({ label, items }: QuickActionsProps) {
             onClick={() => handleClick(item.action)}
           >
             <span className="quick-action-icon">
-              {ACTION_ICONS[item.icon ?? ''] ?? '⚡'}
+              {getIcon(item.icon)}
             </span>
             <span className="quick-action-label">{item.label}</span>
           </button>

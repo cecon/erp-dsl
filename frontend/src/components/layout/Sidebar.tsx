@@ -3,19 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../services/api';
 import { useThemeStore } from '../../state/themeStore';
+import { getIcon } from '../Icons';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-const NAV_ICONS: Record<string, string> = {
-  dashboard: '📊',
-  package: '📦',
-  users: '👥',
-  clipboard: '📋',
-  receipt: '🧾',
-  history: '📜',
-  building: '🏢',
-  settings: '⚙',
-};
 
 /**
  * DSL-driven sidebar. Fetches navigation schema from the backend
@@ -62,7 +52,6 @@ export function Sidebar() {
               )}
               {section.items?.map((item: any) => {
                 const isActive = location.pathname === item.path;
-                const icon = NAV_ICONS[item.icon] ?? '📄';
 
                 return (
                   <Tooltip
@@ -75,7 +64,7 @@ export function Sidebar() {
                       className={`sidebar-item ${isActive ? 'active' : ''}`}
                       onClick={() => navigate(item.path)}
                     >
-                      <span className="sidebar-item-icon">{icon}</span>
+                      <span className="sidebar-item-icon">{getIcon(item.icon)}</span>
                       {!collapsed && item.label}
                     </div>
                   </Tooltip>

@@ -1,12 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { getIcon } from '../Icons';
 
-const TYPE_ICONS: Record<string, string> = {
-  order: '🛒',
-  product: '📦',
-  customer: '👤',
-  invoice: '🧾',
-  schema: '📄',
-};
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface ActivityItem {
   id: string;
@@ -34,7 +28,7 @@ export function ActivityFeed({ label, items }: ActivityFeedProps) {
         {items.map((item) => (
           <div key={item.id} className="activity-item">
             <span className="activity-icon">
-              {TYPE_ICONS[item.type ?? ''] ?? '📌'}
+              {getIcon(item.type)}
             </span>
             <div className="activity-content">
               <div className="activity-text">{item.text}</div>
