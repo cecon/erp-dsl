@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
    ERP-DSL — Corporate Admin Template
-   Enterprise-grade dark admin panel theme
+   Enterprise-grade admin panel theme (dark + light)
    ═══════════════════════════════════════════════════════════ */
 
 :root {
@@ -42,6 +42,41 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  /* ── Input (for light mode overrides) ──────────────────── */
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --input-border: rgba(255, 255, 255, 0.08);
+  --input-label: #94a3b8;
+}
+
+/* ── Light Mode ───────────────────────────────────────────── */
+[data-mantine-color-scheme='light'] {
+  --sidebar-bg: #ffffff;
+  --sidebar-hover: rgba(0, 0, 0, 0.04);
+  --sidebar-active: rgba(59, 130, 246, 0.08);
+  --sidebar-text: #64748b;
+  --sidebar-text-active: #1e293b;
+
+  --header-bg: #ffffff;
+  --header-border: #e2e8f0;
+
+  --content-bg: #f1f5f9;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --card-hover-border: rgba(59, 130, 246, 0.35);
+
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  --border-default: #e2e8f0;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  --input-bg: #ffffff;
+  --input-border: #e2e8f0;
+  --input-label: #475569;
 }
 
 /* ── Reset ──────────────────────────────────────────────── */

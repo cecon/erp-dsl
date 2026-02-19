@@ -8,6 +8,9 @@ import {
   SelectField,
   CheckboxField,
   TextAreaField,
+  ColorSwatchPicker,
+  ThemeSwitch,
+  SegmentedField,
 } from '../../components/form';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -41,6 +44,9 @@ export const componentRegistry: Record<string, ComponentType<any>> = {
   select: SelectField,
   checkbox: CheckboxField,
   textarea: TextAreaField,
+  color_swatch_picker: ColorSwatchPicker,
+  theme_switch: ThemeSwitch,
+  segmented: SegmentedField,
   hidden: () => null,
 };
 

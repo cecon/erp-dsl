@@ -14,6 +14,7 @@ from src.infrastructure.persistence.seed_schemas import (
     HEADER_SCHEMA,
     PRODUCTS_PAGE_SCHEMA,
     SIDEBAR_SCHEMA,
+    THEME_CONFIG_SCHEMA,
 )
 from src.infrastructure.persistence.sqlalchemy.models import (
     PageVersionModel,
@@ -31,6 +32,7 @@ SEED_PAGES = [
     ("_sidebar", SIDEBAR_SCHEMA),
     ("_header", HEADER_SCHEMA),
     ("dashboard", DASHBOARD_SCHEMA),
+    ("_theme_config", THEME_CONFIG_SCHEMA),
 ]
 
 

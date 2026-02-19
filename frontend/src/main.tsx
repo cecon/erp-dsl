@@ -10,11 +10,25 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { useThemeStore } from './state/themeStore';
 
-function buildTheme(primaryColor: string, radius: string) {
+const FONTSIZE_MAP: Record<string, string> = {
+  sm: '12px',
+  md: '14px',
+  lg: '16px',
+};
+
+function buildTheme(primaryColor: string, radius: string, fontSize: string) {
+  const fs = FONTSIZE_MAP[fontSize] ?? '14px';
   return createTheme({
     primaryColor,
     fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
     defaultRadius: radius,
+    fontSizes: {
+      xs: `calc(${fs} - 2px)`,
+      sm: `calc(${fs} - 1px)`,
+      md: fs,
+      lg: `calc(${fs} + 2px)`,
+      xl: `calc(${fs} + 4px)`,
+    },
     colors: {
       dark: [
         '#c9cdd5',
@@ -36,50 +50,50 @@ function buildTheme(primaryColor: string, radius: string) {
       },
       TextInput: {
         styles: {
-          label: { fontSize: '13px', fontWeight: 500, marginBottom: 4, color: '#94a3b8' },
+          label: { fontSize: '13px', fontWeight: 500, marginBottom: 4, color: 'var(--input-label)' },
           input: {
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--input-border)',
             fontSize: '13px',
           },
         },
       },
       PasswordInput: {
         styles: {
-          label: { fontSize: '13px', fontWeight: 500, marginBottom: 4, color: '#94a3b8' },
+          label: { fontSize: '13px', fontWeight: 500, marginBottom: 4, color: 'var(--input-label)' },
           input: {
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--input-border)',
             fontSize: '13px',
           },
         },
       },
       NumberInput: {
         styles: {
-          label: { fontSize: '13px', fontWeight: 500, marginBottom: 4, color: '#94a3b8' },
+          label: { fontSize: '13px', fontWeight: 500, marginBottom: 4, color: 'var(--input-label)' },
           input: {
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--input-border)',
             fontSize: '13px',
           },
         },
       },
       Select: {
         styles: {
-          label: { fontSize: '13px', fontWeight: 500, marginBottom: 4, color: '#94a3b8' },
+          label: { fontSize: '13px', fontWeight: 500, marginBottom: 4, color: 'var(--input-label)' },
           input: {
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--input-bg)',
+            border: '1px solid var(--input-border)',
             fontSize: '13px',
           },
         },
       },
       Modal: {
         styles: {
-          content: { background: '#1a2030', border: '1px solid rgba(255,255,255,0.06)' },
+          content: { background: 'var(--card-bg)', border: '1px solid var(--border-default)' },
           header: {
-            background: '#1a2030',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            background: 'var(--card-bg)',
+            borderBottom: '1px solid var(--border-default)',
             paddingBottom: 12,
           },
           title: { fontWeight: 600, fontSize: '15px' },
@@ -102,7 +116,8 @@ function Root() {
   const primaryColor = useThemeStore((s) => s.primaryColor);
   const colorScheme = useThemeStore((s) => s.colorScheme);
   const radius = useThemeStore((s) => s.radius);
-  const theme = buildTheme(primaryColor, radius);
+  const fontSize = useThemeStore((s) => s.fontSize);
+  const theme = buildTheme(primaryColor, radius, fontSize);
 
   return (
     <MantineProvider theme={theme} defaultColorScheme={colorScheme}>

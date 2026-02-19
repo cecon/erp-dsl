@@ -13,3 +13,6 @@ export { DateTimeField } from './DateTimeField';
 export { SelectField } from './SelectField';
 export { CheckboxField } from './CheckboxField';
 export { TextAreaField } from './TextAreaField';
+export { ColorSwatchPicker } from './ColorSwatchPicker';
+export { ThemeSwitch } from './ThemeSwitch';
+export { SegmentedField } from './SegmentedField';
