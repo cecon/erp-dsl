@@ -14,6 +14,11 @@ from src.infrastructure.persistence.seed_schemas import (
     HEADER_SCHEMA,
     PRODUCTS_PAGE_SCHEMA,
     SIDEBAR_SCHEMA,
+)
+from src.infrastructure.persistence.seed_schemas_fiscal import (
+    FISCAL_RULES_PAGE_SCHEMA,
+    OPERATION_NATURES_PAGE_SCHEMA,
+    TAX_GROUPS_PAGE_SCHEMA,
     THEME_CONFIG_SCHEMA,
 )
 from src.infrastructure.persistence.sqlalchemy.models import (
@@ -29,6 +34,9 @@ ADMIN_USER_ID = "00000000-0000-0000-0000-000000000002"
 
 SEED_PAGES = [
     ("products", PRODUCTS_PAGE_SCHEMA),
+    ("tax_groups", TAX_GROUPS_PAGE_SCHEMA),
+    ("operation_natures", OPERATION_NATURES_PAGE_SCHEMA),
+    ("fiscal_rules", FISCAL_RULES_PAGE_SCHEMA),
     ("_sidebar", SIDEBAR_SCHEMA),
     ("_header", HEADER_SCHEMA),
     ("dashboard", DASHBOARD_SCHEMA),

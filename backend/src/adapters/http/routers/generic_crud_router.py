@@ -1,0 +1,171 @@
+"""Generic CRUD router — single router for all DSL-driven entities.
+
+Resolves the target table from the page schema's dataSource.tableName,
+then delegates all operations to GenericCrudRepository. This eliminates
+the need for per-entity routers, use cases, and repositories.
+"""
+
+from __future__ import annotations
+
+from decimal import Decimal, InvalidOperation
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from src.adapters.http.dependency_injection import get_current_user, get_db
+from src.application.ports.auth_port import AuthContext
+from src.infrastructure.persistence.sqlalchemy.generic_crud_repository import (
+    GenericCrudRepository,
+)
+from src.infrastructure.persistence.sqlalchemy.models import (
+    Base,
+    PageVersionModel,
+)
+
+router = APIRouter()
+
+
+def _resolve_schema(
+    db: Session, entity_name: str
+) -> dict[str, Any]:
+    """Fetch the published page schema for an entity."""
+    page = (
+        db.query(PageVersionModel)
+        .filter(
+            PageVersionModel.page_key == entity_name,
+            PageVersionModel.scope == "global",
+            PageVersionModel.status == "published",
+        )
+        .first()
+    )
+    if not page or not page.schema_json:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No published schema for '{entity_name}'",
+        )
+    return page.schema_json
+
+
+def _get_table_name(schema: dict[str, Any], entity_name: str) -> str:
+    """Extract tableName from dataSource, with fallback."""
+    ds = schema.get("dataSource", {})
+    table_name = ds.get("tableName", entity_name)
+    if table_name not in Base.metadata.tables:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Table '{table_name}' not found",
+        )
+    return table_name
+
+
+def _coerce_field(value: Any, db_type: str) -> Any:
+    """Coerce a request value to the expected DB type."""
+    if value is None or value == "":
+        return value
+    if db_type == "decimal":
+        try:
+            return Decimal(str(value))
+        except InvalidOperation:
+            return Decimal("0")
+    return value
+
+
+def _coerce_data(
+    data: dict[str, Any], schema: dict[str, Any]
+) -> dict[str, Any]:
+    """Coerce all fields in data dict based on schema field types."""
+    fields = schema.get("dataSource", {}).get("fields", [])
+    type_map = {f["id"]: f.get("dbType", "string") for f in fields}
+
+    coerced = {}
+    for key, value in data.items():
+        db_type = type_map.get(key, "string")
+        coerced[key] = _coerce_field(value, db_type)
+    return coerced
+
+
+def _serialize_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Convert Decimal/datetime values to JSON-safe types."""
+    result = {}
+    for key, value in row.items():
+        if isinstance(value, Decimal):
+            result[key] = float(value)
+        else:
+            result[key] = value
+    return result
+
+
+# ── Endpoints ────────────────────────────────────────────────────
+
+
+@router.get("/{entity_name}")
+def list_entities(
+    entity_name: str,
+    offset: int = 0,
+    limit: int = 50,
+    auth: AuthContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """List all rows for an entity."""
+    schema = _resolve_schema(db, entity_name)
+    table_name = _get_table_name(schema, entity_name)
+    repo = GenericCrudRepository(db)
+    result = repo.list(table_name, auth.tenant_id, offset, limit)
+    result["items"] = [_serialize_row(r) for r in result["items"]]
+    return result
+
+
+@router.post("/{entity_name}")
+def create_entity(
+    entity_name: str,
+    body: dict[str, Any],
+    auth: AuthContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Create a new row for an entity."""
+    schema = _resolve_schema(db, entity_name)
+    table_name = _get_table_name(schema, entity_name)
+    data = _coerce_data(body, schema)
+    repo = GenericCrudRepository(db)
+    result = repo.create(table_name, auth.tenant_id, data)
+    db.commit()
+    return _serialize_row(result)
+
+
+@router.put("/{entity_name}/{entity_id}")
+def update_entity(
+    entity_name: str,
+    entity_id: str,
+    body: dict[str, Any],
+    auth: AuthContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Update an existing entity row."""
+    schema = _resolve_schema(db, entity_name)
+    table_name = _get_table_name(schema, entity_name)
+    data = _coerce_data(body, schema)
+    repo = GenericCrudRepository(db)
+    result = repo.update(table_name, auth.tenant_id, entity_id, data)
+    if not result:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    db.commit()
+    return _serialize_row(result)
+
+
+@router.delete("/{entity_name}/{entity_id}")
+def delete_entity(
+    entity_name: str,
+    entity_id: str,
+    auth: AuthContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """Delete an entity row."""
+    schema = _resolve_schema(db, entity_name)
+    table_name = _get_table_name(schema, entity_name)
+    repo = GenericCrudRepository(db)
+    deleted = repo.delete(table_name, auth.tenant_id, entity_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    db.commit()
+    return {"detail": f"{entity_name} deleted"}

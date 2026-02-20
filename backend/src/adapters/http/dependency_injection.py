@@ -11,12 +11,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.application.ports.auth_port import AuthContext
 from src.application.use_cases.create_draft import CreateDraftUseCase
-from src.application.use_cases.crud_product import (
-    CreateProductUseCase,
-    DeleteProductUseCase,
-    ListProductsUseCase,
-    UpdateProductUseCase,
-)
 from src.application.use_cases.get_page import GetPageUseCase
 from src.application.use_cases.merge_page import MergePageUseCase
 from src.application.use_cases.publish_page import PublishPageUseCase
@@ -24,9 +18,6 @@ from src.application.use_cases.rollback_page import RollbackPageUseCase
 from src.infrastructure.config.settings import settings
 from src.infrastructure.persistence.sqlalchemy.page_repository_impl import (
     PageRepositoryImpl,
-)
-from src.infrastructure.persistence.sqlalchemy.product_repository_impl import (
-    ProductRepositoryImpl,
 )
 from src.infrastructure.security.jwt_auth_adapter import JWTAuthAdapter
 
@@ -61,7 +52,7 @@ def get_current_user(
     return ctx
 
 
-# ── Use case factories ───────────────────────────────────────────────
+# ── Page use case factories ──────────────────────────────────────────
 
 def get_page_use_case(db: Session = Depends(get_db)) -> GetPageUseCase:
     return GetPageUseCase(PageRepositoryImpl(db))
@@ -86,26 +77,3 @@ def rollback_page_use_case(
 def merge_page_use_case(db: Session = Depends(get_db)) -> MergePageUseCase:
     return MergePageUseCase(PageRepositoryImpl(db))
 
-
-def create_product_use_case(
-    db: Session = Depends(get_db),
-) -> CreateProductUseCase:
-    return CreateProductUseCase(ProductRepositoryImpl(db))
-
-
-def update_product_use_case(
-    db: Session = Depends(get_db),
-) -> UpdateProductUseCase:
-    return UpdateProductUseCase(ProductRepositoryImpl(db))
-
-
-def delete_product_use_case(
-    db: Session = Depends(get_db),
-) -> DeleteProductUseCase:
-    return DeleteProductUseCase(ProductRepositoryImpl(db))
-
-
-def list_products_use_case(
-    db: Session = Depends(get_db),
-) -> ListProductsUseCase:
-    return ListProductsUseCase(ProductRepositoryImpl(db))

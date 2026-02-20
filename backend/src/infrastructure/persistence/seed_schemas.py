@@ -16,9 +16,15 @@ PRODUCTS_PAGE_SCHEMA: dict[str, Any] = {
     "description": "CRUD page for product management",
     "layout": "grid",
     "dataSource": {
-        "endpoint": "/products",
+        "endpoint": "/entities/products",
+        "tableName": "products",
         "method": "GET",
         "paginationParams": {"offset": "offset", "limit": "limit"},
+        "fields": [
+            {"id": "name", "dbType": "string", "required": True},
+            {"id": "price", "dbType": "decimal", "required": True},
+            {"id": "sku", "dbType": "string", "required": False},
+        ],
     },
     "components": [
         {
@@ -62,11 +68,35 @@ SIDEBAR_SCHEMA: dict[str, Any] = {
                     "icon": "dashboard",
                     "path": "/",
                 },
+            ],
+        },
+        {
+            "id": "cadastros",
+            "label": "Cadastros",
+            "items": [
                 {
                     "id": "nav-products",
-                    "label": "Products",
+                    "label": "Produtos",
                     "icon": "package",
                     "path": "/pages/products",
+                },
+                {
+                    "id": "nav-tax-groups",
+                    "label": "Grupo Tributário",
+                    "icon": "receipt",
+                    "path": "/pages/tax_groups",
+                },
+                {
+                    "id": "nav-operation-natures",
+                    "label": "Nat. Operação",
+                    "icon": "clipboard",
+                    "path": "/pages/operation_natures",
+                },
+                {
+                    "id": "nav-fiscal-rules",
+                    "label": "Regras Fiscais",
+                    "icon": "settings",
+                    "path": "/pages/fiscal_rules",
                 },
             ],
         },
@@ -254,66 +284,6 @@ DASHBOARD_SCHEMA: dict[str, Any] = {
                     "action": {"type": "navigate", "to": "/pages/reports"},
                 },
             ],
-        },
-    ],
-}
-
-# ─── Theme Configuration ─────────────────────────────────────────
-
-THEME_CONFIG_SCHEMA: dict[str, Any] = {
-    "title": "Theme Settings",
-    "components": [
-        {
-            "id": "primaryColor",
-            "type": "color_swatch_picker",
-            "label": "Primary Color",
-            "options": [
-                {"value": "blue", "hex": "#3b82f6"},
-                {"value": "teal", "hex": "#14b8a6"},
-                {"value": "violet", "hex": "#8b5cf6"},
-                {"value": "cyan", "hex": "#06b6d4"},
-                {"value": "orange", "hex": "#f97316"},
-                {"value": "indigo", "hex": "#6366f1"},
-                {"value": "green", "hex": "#22c55e"},
-            ],
-        },
-        {
-            "id": "colorScheme",
-            "type": "theme_switch",
-            "label": "Color Scheme",
-            "on_label": "Dark Mode",
-            "off_label": "Light Mode",
-            "on_value": "dark",
-            "off_value": "light",
-        },
-        {
-            "id": "radius",
-            "type": "segmented",
-            "label": "Border Radius",
-            "options": [
-                {"value": "xs", "label": "XS"},
-                {"value": "sm", "label": "SM"},
-                {"value": "md", "label": "MD"},
-                {"value": "lg", "label": "LG"},
-                {"value": "xl", "label": "XL"},
-            ],
-        },
-        {
-            "id": "fontSize",
-            "type": "segmented",
-            "label": "Font Size",
-            "options": [
-                {"value": "sm", "label": "Small"},
-                {"value": "md", "label": "Medium"},
-                {"value": "lg", "label": "Large"},
-            ],
-        },
-        {
-            "id": "sidebarCollapsed",
-            "type": "theme_switch",
-            "label": "Sidebar",
-            "on_label": "Collapsed",
-            "off_label": "Expanded",
         },
     ],
 }

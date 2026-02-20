@@ -242,6 +242,68 @@ body {
   padding: 12px 4px;
 }
 
+/* ── Collapsible Sections ─────────────────────────────────── */
+.sidebar-section-collapsible {
+  margin-bottom: 2px;
+}
+
+.sidebar-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  margin-bottom: 2px;
+}
+
+.sidebar-section-toggle:hover {
+  background: var(--sidebar-hover);
+}
+
+.sidebar-section-toggle-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  transition: color 0.15s;
+}
+
+.sidebar-section-toggle:hover .sidebar-section-toggle-label,
+.sidebar-section-toggle.has-active .sidebar-section-toggle-label {
+  color: var(--sidebar-text-active);
+}
+
+.sidebar-chevron {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.sidebar-chevron.open {
+  transform: rotate(90deg);
+}
+
+.sidebar-submenu {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.25s ease;
+}
+
+.sidebar-submenu.open {
+  max-height: 500px;
+}
+
+.sidebar-subitem {
+  padding-left: 24px !important;
+  font-size: 12.5px !important;
+}
+
 /* ═══════════════════════════════════════════════════════════
    HEADER
    ═══════════════════════════════════════════════════════════ */
