@@ -58,28 +58,6 @@ OPERATION_NATURES_PAGE_SCHEMA: dict[str, Any] = {
             {"id": "tipo_movimento", "dbType": "string", "required": True},
         ],
     },
-    "components": [
-        {
-            "id": "operation-nature-form",
-            "type": "form",
-            "components": [
-                {
-                    "id": "descricao",
-                    "type": "text",
-                    "label": "Descrição",
-                },
-                {
-                    "id": "tipo_movimento",
-                    "type": "select",
-                    "label": "Tipo de Movimento",
-                    "options": [
-                        {"value": "Entrada", "label": "Entrada"},
-                        {"value": "Saída", "label": "Saída"},
-                    ],
-                },
-            ],
-        },
-    ],
     "columns": [
         {"id": "col-descricao", "key": "descricao", "label": "Descrição"},
         {
@@ -93,8 +71,14 @@ OPERATION_NATURES_PAGE_SCHEMA: dict[str, Any] = {
             "id": "action-create",
             "type": "create",
             "label": "Nova Natureza",
+            "navigateTo": "/pages/operation_natures_form",
         },
-        {"id": "action-edit", "type": "edit", "label": "Editar"},
+        {
+            "id": "action-edit",
+            "type": "edit",
+            "label": "Editar",
+            "navigateTo": "/pages/operation_natures_form",
+        },
         {"id": "action-delete", "type": "delete", "label": "Excluir"},
     ],
 }
@@ -254,6 +238,53 @@ TAX_GROUPS_FORM_SCHEMA: dict[str, Any] = {
                     "type": "cancel",
                     "label": "Cancelar",
                     "navigateTo": "/pages/tax_groups",
+                }
+            ]
+        }
+    ],
+}
+
+# ─── Operation Natures Form Page ─────────────────────────────────
+
+OPERATION_NATURES_FORM_SCHEMA: dict[str, Any] = {
+    "title": "Configurar Natureza de Operação",
+    "description": "Crie ou edite a natureza de operação",
+    "layout": "form",
+    "dataSource": {
+        "endpoint": "/entities/operation_natures",
+        "method": "POST",
+    },
+    "components": [
+        {
+            "id": "operation-natures-form-main",
+            "type": "form",
+            "components": [
+                {
+                    "id": "descricao",
+                    "type": "text",
+                    "label": "Descrição",
+                },
+                {
+                    "id": "tipo_movimento",
+                    "type": "select",
+                    "label": "Tipo de Movimento",
+                    "options": [
+                        {"value": "Entrada", "label": "Entrada"},
+                        {"value": "Saída", "label": "Saída"},
+                    ],
+                },
+            ],
+            "actions": [
+                {
+                    "id": "submit-btn",
+                    "type": "submit",
+                    "label": "Salvar",
+                },
+                {
+                    "id": "cancel-btn",
+                    "type": "cancel",
+                    "label": "Cancelar",
+                    "navigateTo": "/pages/operation_natures",
                 }
             ]
         }
