@@ -222,6 +222,44 @@ THEME_CONFIG_SCHEMA: dict[str, Any] = {
     ],
 }
 
+# ─── Tax Groups Form Page ────────────────────────────────────────
+
+TAX_GROUPS_FORM_SCHEMA: dict[str, Any] = {
+    "title": "Configurar Grupo Tributário",
+    "description": "Crie ou edite os detalhes do grupo tributário",
+    "layout": "form",
+    "dataSource": {
+        "endpoint": "/entities/tax_groups",
+        "method": "POST",
+    },
+    "components": [
+        {
+            "id": "tax-groups-form-main",
+            "type": "form",
+            "components": [
+                {
+                    "id": "descricao",
+                    "type": "text",
+                    "label": "Descrição",
+                },
+            ],
+            "actions": [
+                {
+                    "id": "submit-btn",
+                    "type": "submit",
+                    "label": "Salvar",
+                },
+                {
+                    "id": "cancel-btn",
+                    "type": "cancel",
+                    "label": "Cancelar",
+                    "navigateTo": "/pages/tax_groups",
+                }
+            ]
+        }
+    ],
+}
+
 # ─── Fiscal Rules Form Page ──────────────────────────────────────
 
 FISCAL_RULES_FORM_SCHEMA: dict[str, Any] = {
