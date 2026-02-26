@@ -22,19 +22,6 @@ TAX_GROUPS_PAGE_SCHEMA: dict[str, Any] = {
             {"id": "descricao", "dbType": "string", "required": True},
         ],
     },
-    "components": [
-        {
-            "id": "tax-group-form",
-            "type": "form",
-            "components": [
-                {
-                    "id": "descricao",
-                    "type": "text",
-                    "label": "Descrição",
-                },
-            ],
-        },
-    ],
     "columns": [
         {"id": "col-descricao", "key": "descricao", "label": "Descrição"},
     ],
@@ -43,8 +30,14 @@ TAX_GROUPS_PAGE_SCHEMA: dict[str, Any] = {
             "id": "action-create",
             "type": "create",
             "label": "Novo Grupo",
+            "navigateTo": "/pages/tax_groups_form",
         },
-        {"id": "action-edit", "type": "edit", "label": "Editar"},
+        {
+            "id": "action-edit",
+            "type": "edit",
+            "label": "Editar",
+            "navigateTo": "/pages/tax_groups_form",
+        },
         {"id": "action-delete", "type": "delete", "label": "Excluir"},
     ],
 }
