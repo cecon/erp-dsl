@@ -113,7 +113,7 @@ FISCAL_RULES_PAGE_SCHEMA: dict[str, Any] = {
     "description": "Matriz de regras fiscais (Grupo x Natureza x UF)",
     "layout": "grid",
     "dataSource": {
-        "endpoint": "/entities/fiscal_rules",
+        "endpoint": "/fiscal_rules",
         "tableName": "fiscal_rules",
         "method": "GET",
         "paginationParams": {"offset": "offset", "limit": "limit"},
@@ -138,9 +138,105 @@ FISCAL_RULES_PAGE_SCHEMA: dict[str, Any] = {
             {"id": "is_aliquota", "dbType": "decimal", "required": False},
         ],
     },
+    "components": [],
+    "columns": [
+        {"id": "col-cfop", "key": "cfop", "label": "CFOP"},
+        {"id": "col-uf-orig", "key": "uf_origem", "label": "UF Orig."},
+        {"id": "col-uf-dest", "key": "uf_destino", "label": "UF Dest."},
+        {"id": "col-icms-cst", "key": "icms_cst", "label": "ICMS CST"},
+        {
+            "id": "col-icms-aliq",
+            "key": "icms_aliquota",
+            "label": "ICMS %",
+        },
+        {"id": "col-pis", "key": "pis_cst", "label": "PIS CST"},
+        {"id": "col-cofins", "key": "cofins_cst", "label": "COFINS CST"},
+    ],
+    "actions": [
+        {
+            "id": "action-create",
+            "type": "create",
+            "label": "Nova Regra",
+            "navigateTo": "/pages/fiscal_rules_form",
+        },
+        {"id": "action-edit", "type": "edit", "label": "Editar"},
+        {"id": "action-delete", "type": "delete", "label": "Excluir"},
+    ],
+}
+
+# ─── Theme Configuration ─────────────────────────────────────────
+
+THEME_CONFIG_SCHEMA: dict[str, Any] = {
+    "title": "Theme Settings",
     "components": [
         {
-            "id": "fiscal-rule-form",
+            "id": "primaryColor",
+            "type": "color_swatch_picker",
+            "label": "Primary Color",
+            "options": [
+                {"value": "blue", "hex": "#3b82f6"},
+                {"value": "teal", "hex": "#14b8a6"},
+                {"value": "violet", "hex": "#8b5cf6"},
+                {"value": "cyan", "hex": "#06b6d4"},
+                {"value": "orange", "hex": "#f97316"},
+                {"value": "indigo", "hex": "#6366f1"},
+                {"value": "green", "hex": "#22c55e"},
+            ],
+        },
+        {
+            "id": "colorScheme",
+            "type": "theme_switch",
+            "label": "Color Scheme",
+            "on_label": "Dark Mode",
+            "off_label": "Light Mode",
+            "on_value": "dark",
+            "off_value": "light",
+        },
+        {
+            "id": "radius",
+            "type": "segmented",
+            "label": "Border Radius",
+            "options": [
+                {"value": "xs", "label": "XS"},
+                {"value": "sm", "label": "SM"},
+                {"value": "md", "label": "MD"},
+                {"value": "lg", "label": "LG"},
+                {"value": "xl", "label": "XL"},
+            ],
+        },
+        {
+            "id": "fontSize",
+            "type": "segmented",
+            "label": "Font Size",
+            "options": [
+                {"value": "sm", "label": "Small"},
+                {"value": "md", "label": "Medium"},
+                {"value": "lg", "label": "Large"},
+            ],
+        },
+        {
+            "id": "sidebarCollapsed",
+            "type": "theme_switch",
+            "label": "Sidebar",
+            "on_label": "Collapsed",
+            "off_label": "Expanded",
+        },
+    ],
+}
+
+# ─── Fiscal Rules Form Page ──────────────────────────────────────
+
+FISCAL_RULES_FORM_SCHEMA: dict[str, Any] = {
+    "title": "Configurar Regra Fiscal",
+    "description": "Crie ou edite os detalhes da regra fiscal",
+    "layout": "form",
+    "dataSource": {
+        "endpoint": "/fiscal_rules",
+        "method": "POST",
+    },
+    "components": [
+        {
+            "id": "fiscal-rule-form-main",
             "type": "form",
             "components": [
                 {
@@ -229,88 +325,19 @@ FISCAL_RULES_PAGE_SCHEMA: dict[str, Any] = {
                     "label": "IS Alíquota (%)",
                 },
             ],
-        },
-    ],
-    "columns": [
-        {"id": "col-cfop", "key": "cfop", "label": "CFOP"},
-        {"id": "col-uf-orig", "key": "uf_origem", "label": "UF Orig."},
-        {"id": "col-uf-dest", "key": "uf_destino", "label": "UF Dest."},
-        {"id": "col-icms-cst", "key": "icms_cst", "label": "ICMS CST"},
-        {
-            "id": "col-icms-aliq",
-            "key": "icms_aliquota",
-            "label": "ICMS %",
-        },
-        {"id": "col-pis", "key": "pis_cst", "label": "PIS CST"},
-        {"id": "col-cofins", "key": "cofins_cst", "label": "COFINS CST"},
-    ],
-    "actions": [
-        {
-            "id": "action-create",
-            "type": "create",
-            "label": "Nova Regra",
-        },
-        {"id": "action-edit", "type": "edit", "label": "Editar"},
-        {"id": "action-delete", "type": "delete", "label": "Excluir"},
-    ],
-}
-
-# ─── Theme Configuration ─────────────────────────────────────────
-
-THEME_CONFIG_SCHEMA: dict[str, Any] = {
-    "title": "Theme Settings",
-    "components": [
-        {
-            "id": "primaryColor",
-            "type": "color_swatch_picker",
-            "label": "Primary Color",
-            "options": [
-                {"value": "blue", "hex": "#3b82f6"},
-                {"value": "teal", "hex": "#14b8a6"},
-                {"value": "violet", "hex": "#8b5cf6"},
-                {"value": "cyan", "hex": "#06b6d4"},
-                {"value": "orange", "hex": "#f97316"},
-                {"value": "indigo", "hex": "#6366f1"},
-                {"value": "green", "hex": "#22c55e"},
-            ],
-        },
-        {
-            "id": "colorScheme",
-            "type": "theme_switch",
-            "label": "Color Scheme",
-            "on_label": "Dark Mode",
-            "off_label": "Light Mode",
-            "on_value": "dark",
-            "off_value": "light",
-        },
-        {
-            "id": "radius",
-            "type": "segmented",
-            "label": "Border Radius",
-            "options": [
-                {"value": "xs", "label": "XS"},
-                {"value": "sm", "label": "SM"},
-                {"value": "md", "label": "MD"},
-                {"value": "lg", "label": "LG"},
-                {"value": "xl", "label": "XL"},
-            ],
-        },
-        {
-            "id": "fontSize",
-            "type": "segmented",
-            "label": "Font Size",
-            "options": [
-                {"value": "sm", "label": "Small"},
-                {"value": "md", "label": "Medium"},
-                {"value": "lg", "label": "Large"},
-            ],
-        },
-        {
-            "id": "sidebarCollapsed",
-            "type": "theme_switch",
-            "label": "Sidebar",
-            "on_label": "Collapsed",
-            "off_label": "Expanded",
-        },
+            "actions": [
+                {
+                    "id": "submit-btn",
+                    "type": "submit",
+                    "label": "Salvar",
+                },
+                {
+                    "id": "cancel-btn",
+                    "type": "cancel",
+                    "label": "Cancelar",
+                    "navigateTo": "/pages/fiscal_rules",
+                }
+            ]
+        }
     ],
 }

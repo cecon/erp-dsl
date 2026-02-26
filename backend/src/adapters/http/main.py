@@ -48,6 +48,16 @@ def create_app() -> FastAPI:
     # Register routers
     app.include_router(auth_router.router, prefix="/auth", tags=["Auth"])
     app.include_router(pages_router.router, prefix="/pages", tags=["Pages"])
+    
+    # Custom business routers
+    from src.adapters.http.routers import fiscal_rule_router
+    app.include_router(
+        fiscal_rule_router.router,
+        prefix="/fiscal_rules",
+        tags=["Fiscal Rules"],
+    )
+    
+    # Generic CRUD fallback
     app.include_router(
         generic_crud_router.router,
         prefix="/entities",
@@ -55,7 +65,6 @@ def create_app() -> FastAPI:
     )
 
     return app
-
 
 app = create_app()
 

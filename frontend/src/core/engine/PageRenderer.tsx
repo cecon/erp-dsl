@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../services/api';
 import { DynamicForm } from './DynamicForm';
-import { EnterpriseGrid } from '../../components/grid/EnterpriseGrid';
 import { DynamicMrtGrid } from '../../components/grid/DynamicMrtGrid';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -13,6 +12,7 @@ interface SchemaAction {
   id: string;
   type: 'create' | 'edit' | 'delete';
   label: string;
+  navigateTo?: string;
 }
 
 interface DataSource {
@@ -189,8 +189,12 @@ export function PageRenderer() {
         {createAction && (
           <Button
             onClick={() => {
-              setEditingItem(null);
-              setFormOpen(true);
+              if (createAction.navigateTo) {
+                window.location.href = createAction.navigateTo;
+              } else {
+                setEditingItem(null);
+                setFormOpen(true);
+              }
             }}
           >
             + {createAction.label}
@@ -199,19 +203,8 @@ export function PageRenderer() {
       </div>
 
       {/* Data Grid */}
-      {schema.columns && pageKey === 'products' ? (
+      {schema.columns ? (
         <DynamicMrtGrid
-          columns={schema.columns}
-          data={gridData?.items ?? []}
-          total={gridData?.total ?? 0}
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      ) : schema.columns ? (
-        <EnterpriseGrid
           columns={schema.columns}
           data={gridData?.items ?? []}
           total={gridData?.total ?? 0}

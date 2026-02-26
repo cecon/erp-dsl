@@ -17,6 +17,7 @@ from src.infrastructure.persistence.seed_schemas import (
 )
 from src.infrastructure.persistence.seed_schemas_fiscal import (
     FISCAL_RULES_PAGE_SCHEMA,
+    FISCAL_RULES_FORM_SCHEMA,
     OPERATION_NATURES_PAGE_SCHEMA,
     TAX_GROUPS_PAGE_SCHEMA,
     THEME_CONFIG_SCHEMA,
@@ -37,6 +38,7 @@ SEED_PAGES = [
     ("tax_groups", TAX_GROUPS_PAGE_SCHEMA),
     ("operation_natures", OPERATION_NATURES_PAGE_SCHEMA),
     ("fiscal_rules", FISCAL_RULES_PAGE_SCHEMA),
+    ("fiscal_rules_form", FISCAL_RULES_FORM_SCHEMA),
     ("_sidebar", SIDEBAR_SCHEMA),
     ("_header", HEADER_SCHEMA),
     ("dashboard", DASHBOARD_SCHEMA),
