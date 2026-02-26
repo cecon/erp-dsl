@@ -5,6 +5,7 @@ import { useParams } from 'react-router-dom';
 import api from '../../services/api';
 import { DynamicForm } from './DynamicForm';
 import { EnterpriseGrid } from '../../components/grid/EnterpriseGrid';
+import { DynamicMrtGrid } from '../../components/grid/DynamicMrtGrid';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -198,7 +199,18 @@ export function PageRenderer() {
       </div>
 
       {/* Data Grid */}
-      {schema.columns && (
+      {schema.columns && pageKey === 'products' ? (
+        <DynamicMrtGrid
+          columns={schema.columns}
+          data={gridData?.items ?? []}
+          total={gridData?.total ?? 0}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      ) : schema.columns ? (
         <EnterpriseGrid
           columns={schema.columns}
           data={gridData?.items ?? []}
@@ -209,7 +221,7 @@ export function PageRenderer() {
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
-      )}
+      ) : null}
 
       {/* Create/Edit Modal */}
       <Modal
