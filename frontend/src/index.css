@@ -798,3 +798,27 @@ body {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MRT PREMIUM GRID
+   ═══════════════════════════════════════════════════════════ */
+.mrt-premium-grid .mantine-Table-root thead tr th {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+}
+
+[data-mantine-color-scheme='light'] .mrt-premium-grid .mantine-Table-root thead tr th {
+  background: #f8fafc !important;
+}
+
+.mrt-premium-grid .mantine-Table-root tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.mrt-premium-grid .mantine-Table-root tbody tr td {
+  border-bottom: 1px solid var(--border-default) !important;
+}
+
+.mrt-premium-grid .mantine-Table-root tbody tr:last-of-type td {
+  border-bottom: none !important;
+}

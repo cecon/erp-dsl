@@ -28,6 +28,7 @@ interface PageSchema {
   schema: {
     title?: string;
     description?: string;
+    layout?: string;
     components?: any[];
     columns?: any[];
     actions?: SchemaAction[];
@@ -112,11 +113,19 @@ export function PageRenderer() {
 
   /* ── Handlers ───────────────────────────────────────────────── */
 
-  const handleEdit = useCallback((row: any) => {
-    setEditingItem(row);
-    setFormOpen(true);
-  }, []);
-
+  const handleEdit = useCallback(
+    (row: any) => {
+      if (editAction?.navigateTo) {
+        // e.g. navigateTo: '/pages/fiscal_rules_form'
+        // We append ?id=123 so the form page knows what to load
+        window.location.href = `${editAction.navigateTo}?id=${row.id}`;
+      } else {
+        setEditingItem(row);
+        setFormOpen(true);
+      }
+    },
+    [editAction]
+  );
   const handleDelete = useCallback(
     (row: any) => {
       const label = row.name ?? row.id;
@@ -138,13 +147,24 @@ export function PageRenderer() {
     [editingItem, createMutation, updateMutation]
   );
 
+  /* ── URL Search Params (for form layout edit mode) ──────────── */
+  const urlParams = new URLSearchParams(window.location.search);
+  const editId = urlParams.get('id');
+
+  /* ── Fetch single item if in form layout and edit mode ──────── */
+  const { data: singleItemData, isLoading: singleItemLoading } = useQuery({
+    queryKey: [pageKey, 'item', editId],
+    queryFn: () => api.get(`${endpoint}/${editId}`).then((r) => r.data),
+    enabled: !!editId && schema?.layout === 'form',
+  });
+
   /* ── Loading / error states ─────────────────────────────────── */
 
-  if (pageLoading) {
+  if (pageLoading || singleItemLoading) {
     return (
       <Stack align="center" justify="center" h={400}>
         <Loader color="blue" size="lg" />
-        <Text c="dimmed" size="sm">Loading page schema…</Text>
+        <Text c="dimmed" size="sm">Loading…</Text>
       </Stack>
     );
   }
@@ -166,6 +186,7 @@ export function PageRenderer() {
         id: f.id,
         type: f.type,
         label: f.label,
+        options: f.options,
       })) ?? [];
 
   /* ── Modal title from schema actions ────────────────────────── */
@@ -175,6 +196,8 @@ export function PageRenderer() {
     : (createAction?.label ?? 'New');
 
   /* ── Render ─────────────────────────────────────────────────── */
+
+  const isFormLayout = schema.layout === 'form';
 
   return (
     <Stack gap="lg">
@@ -186,7 +209,7 @@ export function PageRenderer() {
             <div className="page-header-subtitle">{schema.description}</div>
           )}
         </div>
-        {createAction && (
+        {createAction && !isFormLayout && (
           <Button
             onClick={() => {
               if (createAction.navigateTo) {
@@ -202,45 +225,67 @@ export function PageRenderer() {
         )}
       </div>
 
-      {/* Data Grid */}
-      {schema.columns ? (
-        <DynamicMrtGrid
-          columns={schema.columns}
-          data={gridData?.items ?? []}
-          total={gridData?.total ?? 0}
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      ) : null}
+      {isFormLayout ? (
+        <div className="admin-card">
+          <DynamicForm
+            fields={formFields}
+            initialValues={singleItemData ?? {}}
+            onSubmit={(values) => {
+              if (editId) {
+                updateMutation.mutate({ ...values, id: editId });
+              } else {
+                createMutation.mutate(values);
+              }
+              // Redirect back handling could be improved based on schema actions
+              window.history.back();
+            }}
+            onCancel={() => window.history.back()}
+            submitLabel="Salvar"
+          />
+        </div>
+      ) : (
+        <>
+          {/* Data Grid */}
+          {schema.columns ? (
+            <DynamicMrtGrid
+              columns={schema.columns}
+              data={gridData?.items ?? []}
+              total={gridData?.total ?? 0}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ) : null}
 
-      {/* Create/Edit Modal */}
-      <Modal
-        opened={formOpen}
-        onClose={() => {
-          setFormOpen(false);
-          setEditingItem(null);
-        }}
-        title={modalTitle}
-        centered
-        size="md"
-        overlayProps={{ backgroundOpacity: 0.6, blur: 3 }}
-      >
-        <DynamicForm
-          fields={formFields}
-          initialValues={editingItem ?? {}}
-          onSubmit={handleSubmit}
-          onCancel={() => {
-            setFormOpen(false);
-            setEditingItem(null);
-          }}
-          submitLabel={editingItem ? 'Update' : 'Create'}
-        />
-      </Modal>
+          {/* Create/Edit Modal */}
+          <Modal
+            opened={formOpen}
+            onClose={() => {
+              setFormOpen(false);
+              setEditingItem(null);
+            }}
+            title={modalTitle}
+            centered
+            size="md"
+            overlayProps={{ backgroundOpacity: 0.6, blur: 3 }}
+          >
+            <DynamicForm
+              fields={formFields}
+              initialValues={editingItem ?? {}}
+              onSubmit={handleSubmit}
+              onCancel={() => {
+                setFormOpen(false);
+                setEditingItem(null);
+              }}
+              submitLabel={editingItem ? 'Update' : 'Create'}
+            />
+          </Modal>
+        </>
+      )}
 
-      {dataLoading && (
+      {dataLoading && !isFormLayout && (
         <Group justify="center">
           <Loader color="blue" size="sm" />
         </Group>

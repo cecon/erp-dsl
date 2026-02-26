@@ -159,7 +159,12 @@ FISCAL_RULES_PAGE_SCHEMA: dict[str, Any] = {
             "label": "Nova Regra",
             "navigateTo": "/pages/fiscal_rules_form",
         },
-        {"id": "action-edit", "type": "edit", "label": "Editar"},
+        {
+            "id": "action-edit",
+            "type": "edit",
+            "label": "Editar",
+            "navigateTo": "/pages/fiscal_rules_form",
+        },
         {"id": "action-delete", "type": "delete", "label": "Excluir"},
     ],
 }

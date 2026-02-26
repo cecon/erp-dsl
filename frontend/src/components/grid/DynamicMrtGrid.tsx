@@ -84,15 +84,28 @@ export function DynamicMrtGrid({
 
     // Actions
     enableRowActions: !!(onEdit || onDelete),
+    positionActionsColumn: 'last',
+    displayColumnDefOptions: {
+      'mrt-row-actions': {
+        header: 'Ações',
+        mantineTableHeadCellProps: {
+          align: 'right',
+        },
+        mantineTableBodyCellProps: {
+          align: 'right',
+        },
+      },
+    },
     renderRowActions: ({ row }) => (
-      <Group gap="xs" wrap="nowrap">
+      <Group gap="xs" wrap="nowrap" justify="flex-end">
         {onEdit && (
           <Tooltip label="Edit">
             <ActionIcon
-              variant="subtle"
+              variant="light"
               color="blue"
               onClick={() => onEdit(row.original)}
-              size="sm"
+              size="md"
+              radius="md"
             >
               <IconEdit size={16} />
             </ActionIcon>
@@ -101,10 +114,11 @@ export function DynamicMrtGrid({
         {onDelete && (
           <Tooltip label="Delete">
             <ActionIcon
-              variant="subtle"
+              variant="light"
               color="red"
               onClick={() => onDelete(row.original)}
-              size="sm"
+              size="md"
+              radius="md"
             >
               <IconTrash size={16} />
             </ActionIcon>
@@ -115,20 +129,50 @@ export function DynamicMrtGrid({
 
     // Theming & UX
     mantineTableProps: {
-      striped: true,
       highlightOnHover: true,
-      withColumnBorders: true,
+      withColumnBorders: false,
+      withRowBorders: true,
+      horizontalSpacing: 'md',
+      verticalSpacing: 'md',
     },
     mantinePaperProps: {
       radius: 'md',
-      withBorder: true,
-      shadow: 'sm',
-      style: { overflow: 'hidden' }, // Ensures inner table follows border radius
+      withBorder: false,
+      shadow: 'none',
+      style: { background: 'transparent' },
+    },
+    mantineTableHeadCellProps: {
+      style: {
+        color: 'var(--text-muted)',
+        fontWeight: 600,
+        fontSize: '11px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+      },
+    },
+    mantineTableBodyCellProps: {
+      style: {
+        fontSize: '13px',
+      },
+    },
+    mantineTopToolbarProps: {
+      style: {
+        background: 'transparent',
+        padding: '16px 20px',
+        borderBottom: '1px solid var(--border-default)',
+      },
+    },
+    mantineBottomToolbarProps: {
+      style: {
+        background: 'transparent',
+        padding: '16px 20px',
+        borderTop: '1px solid var(--border-default)',
+      },
     },
   });
 
   return (
-    <Box className="admin-card" style={{ padding: 0 }}>
+    <Box className="admin-card mrt-premium-grid" style={{ padding: 0, overflow: 'hidden' }}>
       {/* 
         This is a Beta Rollout component.
         We embed MRT inside our standard admin-card pattern.
