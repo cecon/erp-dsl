@@ -22,6 +22,7 @@ from src.infrastructure.persistence.sqlalchemy.page_repository_impl import (
 from src.infrastructure.persistence.sqlalchemy.tenant_context import (
     enable_tenant_filter,
 )
+import src.infrastructure.persistence.sqlalchemy.tax_models  # noqa: F401  — register tables
 from src.infrastructure.security.jwt_auth_adapter import JWTAuthAdapter
 
 # ── Database engine & session ────────────────────────────────────────

@@ -2,6 +2,10 @@
 
 Uses SQLAlchemy Core (Table + metadata) instead of ORM queries, so it can
 work with ANY registered table without needing a dedicated repository class.
+
+Supports optimistic locking via an optional ``version`` column. If a table
+has a ``version INTEGER`` column, updates will check the expected version
+and increment it atomically. A mismatch raises ``StaleDataError``.
 """
 
 from __future__ import annotations
@@ -16,6 +20,22 @@ from sqlalchemy.orm import Session
 from src.infrastructure.persistence.sqlalchemy.models import Base
 
 
+class StaleDataError(Exception):
+    """Raised when an update conflicts due to a version mismatch.
+
+    This indicates another transaction modified the row between the
+    read and the write (optimistic locking violation).
+    """
+
+    def __init__(self, entity_id: str, expected_version: int) -> None:
+        self.entity_id = entity_id
+        self.expected_version = expected_version
+        super().__init__(
+            f"Conflict: entity {entity_id} was modified by another request "
+            f"(expected version {expected_version})"
+        )
+
+
 class GenericCrudRepository:
     """Performs CRUD on any table registered in Base.metadata."""
 
@@ -28,6 +48,10 @@ class GenericCrudRepository:
         if table is None:
             raise ValueError(f"Table '{table_name}' not found in metadata")
         return table
+
+    def _has_version(self, table) -> bool:
+        """Check if a table has a version column for optimistic locking."""
+        return "version" in table.c
 
     def list(
         self,
@@ -97,6 +121,10 @@ class GenericCrudRepository:
             **data,
         }
 
+        # Set initial version for tables with optimistic locking
+        if self._has_version(table) and "version" not in row_data:
+            row_data["version"] = 1
+
         self.db.execute(insert(table).values(**row_data))
         return row_data
 
@@ -106,23 +134,59 @@ class GenericCrudRepository:
         tenant_id: str,
         entity_id: str,
         data: dict[str, Any],
+        expected_version: int | None = None,
     ) -> dict[str, Any] | None:
-        """Update an existing row. Returns updated data or None."""
-        table = self._get_table(table_name)
+        """Update an existing row with optimistic locking.
 
-        # Filter out None values (partial update)
+        If the table has a ``version`` column and ``expected_version`` is
+        provided, the update will only succeed if the current row version
+        matches. On success the version is incremented atomically.
+
+        Raises:
+            StaleDataError: if version mismatch (409 Conflict scenario).
+
+        Returns:
+            Updated row dict, or None if entity not found.
+        """
+        table = self._get_table(table_name)
+        has_ver = self._has_version(table)
+
+        # Filter out None values and internal keys (partial update)
         updates = {k: v for k, v in data.items() if v is not None}
+        updates.pop("_version", None)  # Never persist the client hint
         updates["updated_at"] = datetime.now(timezone.utc)
 
+        # Build WHERE clause
         stmt = (
             update(table)
             .where(table.c.id == entity_id)
             .where(table.c.tenant_id == tenant_id)
-            .values(**updates)
         )
+
+        # Optimistic lock: check version + increment
+        if has_ver and expected_version is not None:
+            stmt = stmt.where(table.c.version == expected_version)
+            updates["version"] = expected_version + 1
+        elif has_ver:
+            # No expected_version provided but table has version column:
+            # still increment to keep the counter moving
+            updates["version"] = table.c.version + 1
+
+        stmt = stmt.values(**updates)
         result = self.db.execute(stmt)
 
         if result.rowcount == 0:
+            # Distinguish "not found" from "version conflict"
+            if has_ver and expected_version is not None:
+                # Check if the row exists at all
+                exists = self.db.execute(
+                    select(func.count())
+                    .select_from(table)
+                    .where(table.c.id == entity_id)
+                    .where(table.c.tenant_id == tenant_id)
+                ).scalar()
+                if exists:
+                    raise StaleDataError(entity_id, expected_version)
             return None
 
         # Return the updated row
@@ -150,3 +214,4 @@ class GenericCrudRepository:
         )
         result = self.db.execute(stmt)
         return result.rowcount > 0
+

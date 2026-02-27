@@ -3,16 +3,18 @@
 import subprocess
 import sys
 
+from alembic import command
+from alembic.config import Config
 from sqlalchemy.orm import Session
 
-from src.adapters.http.dependency_injection import SessionLocal, engine
-from src.infrastructure.persistence.sqlalchemy.models import Base
+from src.adapters.http.dependency_injection import SessionLocal
 from src.infrastructure.persistence.seed import seed_database
 
 
 def main() -> None:
-    # Create tables
-    Base.metadata.create_all(bind=engine)
+    # Run Alembic migrations (replaces Base.metadata.create_all)
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
 
     # Seed
     session = SessionLocal()
@@ -36,3 +38,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

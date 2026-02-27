@@ -102,6 +102,7 @@ class ProductModel(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    version = Column(Integer, nullable=False, default=1)
 
 
 class AuditLogModel(Base):
@@ -119,3 +120,4 @@ class AuditLogModel(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
     )
+    version = Column(Integer, nullable=False, default=1)

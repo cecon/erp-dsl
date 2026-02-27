@@ -29,6 +29,7 @@ from src.application.dsl_functions.pipeline_runner import (
 )
 from src.infrastructure.persistence.sqlalchemy.generic_crud_repository import (
     GenericCrudRepository,
+    StaleDataError,
 )
 from src.infrastructure.persistence.sqlalchemy.models import (
     Base,
@@ -191,14 +192,37 @@ def update_entity(
     body: dict[str, Any],
     db: Session = Depends(get_tenant_db),
 ) -> dict[str, Any]:
-    """Update an existing entity row (auto-filtered by tenant)."""
+    """Update an existing entity row (auto-filtered by tenant).
+
+    Supports optimistic locking: if the body contains ``_version``,
+    the update will only succeed if the current row version matches.
+    On conflict returns 409.
+    """
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
+
+    # Extract version hint before coercion (not a DB field)
+    expected_version: int | None = None
+    if "_version" in body:
+        try:
+            expected_version = int(body.pop("_version"))
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="_version must be an integer",
+            )
+
     data = _coerce_data(body, schema)
     data = run_request_pipeline(data, schema)
     repo = GenericCrudRepository(db)
     tenant_id = db.info["tenant_id"]
-    result = repo.update(table_name, tenant_id, entity_id, data)
+
+    # StaleDataError propagates to the global handler → 409 with details
+    result = repo.update(
+        table_name, tenant_id, entity_id, data,
+        expected_version=expected_version,
+    )
+
     if not result:
         raise HTTPException(status_code=404, detail="Entity not found")
     db.commit()

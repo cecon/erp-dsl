@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Numeric, String
+from sqlalchemy import Column, DateTime, Integer, Numeric, String
 
 from src.infrastructure.persistence.sqlalchemy.models import Base
 
@@ -26,6 +26,7 @@ class TaxGroupModel(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    version = Column(Integer, nullable=False, default=1)
 
 
 class OperationNatureModel(Base):
@@ -46,6 +47,7 @@ class OperationNatureModel(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    version = Column(Integer, nullable=False, default=1)
 
 
 class FiscalRuleModel(Base):
@@ -89,3 +91,4 @@ class FiscalRuleModel(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    version = Column(Integer, nullable=False, default=1)
