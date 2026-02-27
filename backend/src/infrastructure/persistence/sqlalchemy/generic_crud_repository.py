@@ -19,6 +19,18 @@ from sqlalchemy.orm import Session
 
 from src.infrastructure.persistence.sqlalchemy.models import Base
 
+# Operator map for dynamic WHERE clauses
+_OP_MAP = {
+    "eq": lambda col, val: col == val,
+    "neq": lambda col, val: col != val,
+    "gt": lambda col, val: col > val,
+    "gte": lambda col, val: col >= val,
+    "lt": lambda col, val: col < val,
+    "lte": lambda col, val: col <= val,
+    "like": lambda col, val: col.ilike(f"%{val}%"),
+    "in": lambda col, val: col.in_(val.split(",") if isinstance(val, str) else val),
+}
+
 
 class StaleDataError(Exception):
     """Raised when an update conflicts due to a version mismatch.
@@ -53,32 +65,52 @@ class GenericCrudRepository:
         """Check if a table has a version column for optimistic locking."""
         return "version" in table.c
 
+    def _apply_filters(self, query, table, filters: list[dict]):
+        """Apply dynamic WHERE clauses from parsed filters."""
+        for f in filters:
+            col_name = f["field"]
+            operator = f.get("operator", "eq")
+            value = f["value"]
+            if col_name in table.c:
+                op_fn = _OP_MAP.get(operator)
+                if op_fn:
+                    query = query.where(op_fn(table.c[col_name], value))
+        return query
+
     def list(
         self,
         table_name: str,
         tenant_id: str,
         offset: int = 0,
         limit: int = 50,
+        filters: list[dict] | None = None,
+        sort_field: str | None = None,
+        sort_desc: bool = False,
     ) -> dict[str, Any]:
-        """Return paginated rows for a tenant."""
+        """Return paginated, filtered, sorted rows for a tenant."""
         table = self._get_table(table_name)
+        filters = filters or []
 
-        # Count
-        count_q = (
-            select(func.count())
-            .select_from(table)
-            .where(table.c.tenant_id == tenant_id)
-        )
+        # Base WHERE
+        base_where = table.c.tenant_id == tenant_id
+
+        # Count (with filters)
+        count_q = select(func.count()).select_from(table).where(base_where)
+        count_q = self._apply_filters(count_q, table, filters)
         total = self.db.execute(count_q).scalar() or 0
 
-        # Data
-        data_q = (
-            select(table)
-            .where(table.c.tenant_id == tenant_id)
-            .order_by(table.c.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        # Data (with filters + sort)
+        data_q = select(table).where(base_where)
+        data_q = self._apply_filters(data_q, table, filters)
+
+        # Sort
+        if sort_field and sort_field in table.c:
+            col = table.c[sort_field]
+            data_q = data_q.order_by(col.desc() if sort_desc else col.asc())
+        else:
+            data_q = data_q.order_by(table.c.created_at.desc())
+
+        data_q = data_q.offset(offset).limit(limit)
         rows = self.db.execute(data_q).mappings().all()
 
         return {

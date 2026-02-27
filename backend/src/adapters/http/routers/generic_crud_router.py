@@ -19,7 +19,7 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from src.adapters.http.dependency_injection import get_tenant_db
@@ -27,6 +27,7 @@ from src.application.dsl_functions.pipeline_runner import (
     run_request_pipeline,
     run_response_pipeline,
 )
+from src.application.dsl_functions.query_parser import parse_query_params
 from src.application.dsl_functions.validators import validate_data
 from src.infrastructure.persistence.sqlalchemy.generic_crud_repository import (
     GenericCrudRepository,
@@ -132,16 +133,34 @@ def _serialize_row(row: dict[str, Any]) -> dict[str, Any]:
 @router.get("/{entity_name}")
 def list_entities(
     entity_name: str,
+    request: Request,
     offset: int = 0,
     limit: int = 50,
     db: Session = Depends(get_tenant_db),
 ) -> dict[str, Any]:
-    """List all rows for an entity (auto-filtered by tenant)."""
+    """List all rows for an entity (auto-filtered by tenant).
+
+    Supports declarative filters (``filter[field]=value``) and sort
+    (``sort=field`` or ``sort=-field``).  Only fields declared in the
+    schema's ``dataSource.filters`` whitelist are allowed.
+    """
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
+
+    # Parse & validate filters/sort from query string
+    parsed = parse_query_params(dict(request.query_params), schema)
+
     repo = GenericCrudRepository(db)
     tenant_id = db.info["tenant_id"]
-    result = repo.list(table_name, tenant_id, offset, limit)
+    result = repo.list(
+        table_name,
+        tenant_id,
+        offset,
+        limit,
+        filters=parsed.filters,
+        sort_field=parsed.sort_field,
+        sort_desc=parsed.sort_desc,
+    )
     result["items"] = [
         run_response_pipeline(_serialize_row(r), schema)
         for r in result["items"]

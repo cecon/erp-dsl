@@ -94,6 +94,15 @@ FISCAL_RULES_PAGE_SCHEMA: dict[str, Any] = {
         "tableName": "fiscal_rules",
         "method": "GET",
         "paginationParams": {"offset": "offset", "limit": "limit"},
+        "filters": [
+            {"field": "uf_origem", "operator": "eq"},
+            {"field": "uf_destino", "operator": "eq"},
+            {"field": "cfop", "operator": "eq"},
+            {"field": "icms_aliquota", "operator": "gte"},
+            {"field": "id_grupo_tributario", "operator": "eq"},
+            {"field": "id_natureza_operacao", "operator": "eq"},
+        ],
+        "defaultSort": "-created_at",
         "fields": [
             {"id": "id_grupo_tributario", "dbType": "string", "required": True},
             {"id": "id_natureza_operacao", "dbType": "string", "required": True},
