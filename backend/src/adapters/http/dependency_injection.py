@@ -19,6 +19,9 @@ from src.infrastructure.config.settings import settings
 from src.infrastructure.persistence.sqlalchemy.page_repository_impl import (
     PageRepositoryImpl,
 )
+from src.infrastructure.persistence.sqlalchemy.tenant_context import (
+    enable_tenant_filter,
+)
 from src.infrastructure.security.jwt_auth_adapter import JWTAuthAdapter
 
 # ── Database engine & session ────────────────────────────────────────
@@ -26,11 +29,19 @@ from src.infrastructure.security.jwt_auth_adapter import JWTAuthAdapter
 engine = create_engine(settings.database_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
+# Register automatic tenant filtering on every Session from this factory
+enable_tenant_filter(SessionLocal)
+
 security_scheme = HTTPBearer()
 auth_adapter = JWTAuthAdapter()
 
 
 def get_db() -> Generator[Session, None, None]:
+    """Provide a DB session WITHOUT tenant context.
+
+    Use this for operations that don't need tenant isolation:
+    login, seed, admin, schema resolution.
+    """
     db = SessionLocal()
     try:
         yield db
@@ -50,6 +61,23 @@ def get_current_user(
             detail="Invalid or expired token",
         )
     return ctx
+
+
+# ── Tenant-aware DB session ──────────────────────────────────────────
+
+def get_tenant_db(
+    auth: AuthContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Session:
+    """Provide a DB session WITH tenant context.
+
+    Sets ``session.info["tenant_id"]`` so that the automatic
+    tenant filter injects WHERE clauses on every query.
+    The tenant_id is also accessible via ``db.info["tenant_id"]``
+    from the router when needed (e.g. for INSERT operations).
+    """
+    db.info["tenant_id"] = auth.tenant_id
+    return db
 
 
 # ── Page use case factories ──────────────────────────────────────────
@@ -76,4 +104,3 @@ def rollback_page_use_case(
 
 def merge_page_use_case(db: Session = Depends(get_db)) -> MergePageUseCase:
     return MergePageUseCase(PageRepositoryImpl(db))
-

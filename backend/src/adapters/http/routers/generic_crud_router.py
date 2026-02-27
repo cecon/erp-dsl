@@ -6,6 +6,12 @@ the need for per-entity routers, use cases, and repositories.
 
 DSL transforms declared in dataSource.fields[].transforms are
 automatically applied via the pipeline runner.
+
+Tenant isolation is handled automatically by the session-level
+tenant filter (see tenant_context.py). The ``get_tenant_db``
+dependency sets ``session.info["tenant_id"]`` so all SELECT / UPDATE /
+DELETE queries are filtered. INSERT still receives tenant_id explicitly
+via ``db.info["tenant_id"]``.
 """
 
 from __future__ import annotations
@@ -16,12 +22,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from src.adapters.http.dependency_injection import get_current_user, get_db
+from src.adapters.http.dependency_injection import get_tenant_db
 from src.application.dsl_functions.pipeline_runner import (
     run_request_pipeline,
     run_response_pipeline,
 )
-from src.application.ports.auth_port import AuthContext
 from src.infrastructure.persistence.sqlalchemy.generic_crud_repository import (
     GenericCrudRepository,
 )
@@ -36,7 +41,11 @@ router = APIRouter()
 def _resolve_schema(
     db: Session, entity_name: str
 ) -> dict[str, Any]:
-    """Fetch the published page schema for an entity."""
+    """Fetch the published page schema for an entity.
+
+    NOTE: ``page_versions`` is in TENANT_EXEMPT_TABLES, so this query
+    is NOT filtered by tenant_id even when the session has tenant context.
+    """
     page = (
         db.query(PageVersionModel)
         .filter(
@@ -124,14 +133,14 @@ def list_entities(
     entity_name: str,
     offset: int = 0,
     limit: int = 50,
-    auth: AuthContext = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ) -> dict[str, Any]:
-    """List all rows for an entity."""
+    """List all rows for an entity (auto-filtered by tenant)."""
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
     repo = GenericCrudRepository(db)
-    result = repo.list(table_name, auth.tenant_id, offset, limit)
+    tenant_id = db.info["tenant_id"]
+    result = repo.list(table_name, tenant_id, offset, limit)
     result["items"] = [
         run_response_pipeline(_serialize_row(r), schema)
         for r in result["items"]
@@ -143,14 +152,14 @@ def list_entities(
 def get_entity(
     entity_name: str,
     entity_id: str,
-    auth: AuthContext = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ) -> dict[str, Any]:
-    """Get a single entity row by ID."""
+    """Get a single entity row by ID (auto-filtered by tenant)."""
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
     repo = GenericCrudRepository(db)
-    result = repo.get_by_id(table_name, auth.tenant_id, entity_id)
+    tenant_id = db.info["tenant_id"]
+    result = repo.get_by_id(table_name, tenant_id, entity_id)
     if not result:
         raise HTTPException(status_code=404, detail="Entity not found")
     return run_response_pipeline(_serialize_row(result), schema)
@@ -160,8 +169,7 @@ def get_entity(
 def create_entity(
     entity_name: str,
     body: dict[str, Any],
-    auth: AuthContext = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ) -> dict[str, Any]:
     """Create a new row for an entity."""
     schema = _resolve_schema(db, entity_name)
@@ -170,7 +178,8 @@ def create_entity(
     data = _coerce_data(data, schema)
     data = run_request_pipeline(data, schema)
     repo = GenericCrudRepository(db)
-    result = repo.create(table_name, auth.tenant_id, data)
+    tenant_id = db.info["tenant_id"]
+    result = repo.create(table_name, tenant_id, data)
     db.commit()
     return run_response_pipeline(_serialize_row(result), schema)
 
@@ -180,16 +189,16 @@ def update_entity(
     entity_name: str,
     entity_id: str,
     body: dict[str, Any],
-    auth: AuthContext = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ) -> dict[str, Any]:
-    """Update an existing entity row."""
+    """Update an existing entity row (auto-filtered by tenant)."""
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
     data = _coerce_data(body, schema)
     data = run_request_pipeline(data, schema)
     repo = GenericCrudRepository(db)
-    result = repo.update(table_name, auth.tenant_id, entity_id, data)
+    tenant_id = db.info["tenant_id"]
+    result = repo.update(table_name, tenant_id, entity_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Entity not found")
     db.commit()
@@ -200,15 +209,16 @@ def update_entity(
 def delete_entity(
     entity_name: str,
     entity_id: str,
-    auth: AuthContext = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_tenant_db),
 ) -> dict[str, str]:
-    """Delete an entity row."""
+    """Delete an entity row (auto-filtered by tenant)."""
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
     repo = GenericCrudRepository(db)
-    deleted = repo.delete(table_name, auth.tenant_id, entity_id)
+    tenant_id = db.info["tenant_id"]
+    deleted = repo.delete(table_name, tenant_id, entity_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Entity not found")
     db.commit()
     return {"detail": f"{entity_name} deleted"}
+
