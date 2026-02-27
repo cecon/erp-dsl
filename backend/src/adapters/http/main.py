@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.adapters.http.error_handlers import register_error_handlers
 from src.adapters.http.routers import (
+    agent_router,
     auth_router,
     generic_crud_router,
     pages_router,
@@ -51,6 +52,13 @@ def create_app() -> FastAPI:
         generic_crud_router.router,
         prefix="/entities",
         tags=["Generic CRUD"],
+    )
+
+    # Agent endpoints (product enrichment)
+    app.include_router(
+        agent_router.router,
+        prefix="/api/agent",
+        tags=["Agent"],
     )
 
     # Standardized error handling

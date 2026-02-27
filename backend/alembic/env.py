@@ -8,6 +8,8 @@ from sqlalchemy import engine_from_config, pool
 from src.infrastructure.config.settings import settings
 from src.infrastructure.persistence.sqlalchemy.models import Base
 import src.infrastructure.persistence.sqlalchemy.tax_models  # noqa: F401
+import src.infrastructure.persistence.sqlalchemy.fiscal_catalog_models  # noqa: F401
+import src.infrastructure.persistence.sqlalchemy.agent_models  # noqa: F401
 
 config = context.config
 

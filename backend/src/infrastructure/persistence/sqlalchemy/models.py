@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Enum,
@@ -93,6 +94,14 @@ class ProductModel(Base):
     name = Column(String(255), nullable=False)
     price = Column(Numeric(12, 2), nullable=False, default=0)
     sku = Column(String(64), nullable=True)
+    ean = Column(String(14), nullable=True)
+    foto_url = Column(Text, nullable=True)
+    descricao_tecnica = Column(Text, nullable=True)
+    unidade = Column(String(6), nullable=True, default="UN")
+    ncm_codigo = Column(String(8), nullable=True)
+    cest_codigo = Column(String(7), nullable=True)
+    cclass_codigo = Column(String(16), nullable=True)
+    custom_fields = Column(JSON, nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

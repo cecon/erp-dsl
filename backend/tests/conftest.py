@@ -15,6 +15,8 @@ from src.infrastructure.persistence.sqlalchemy.tenant_context import (
     enable_tenant_filter,
 )
 import src.infrastructure.persistence.sqlalchemy.tax_models  # noqa: F401
+import src.infrastructure.persistence.sqlalchemy.fiscal_catalog_models  # noqa: F401
+import src.infrastructure.persistence.sqlalchemy.agent_models  # noqa: F401
 
 
 TENANT_A = "00000000-0000-0000-0000-000000000001"
