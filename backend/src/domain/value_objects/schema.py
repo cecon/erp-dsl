@@ -14,7 +14,7 @@ from typing import Any
 # Whitelisted top-level keys in a page schema
 _ALLOWED_TOP_KEYS = {
     "title", "description", "layout", "components", "actions", "columns",
-    "filters", "defaultValues", "validations", "metadata",
+    "filters", "defaultValues", "validations", "metadata", "dataSource",
 }
 
 # Whitelisted component types

@@ -3,6 +3,9 @@
 Resolves the target table from the page schema's dataSource.tableName,
 then delegates all operations to GenericCrudRepository. This eliminates
 the need for per-entity routers, use cases, and repositories.
+
+DSL transforms declared in dataSource.fields[].transforms are
+automatically applied via the pipeline runner.
 """
 
 from __future__ import annotations
@@ -14,6 +17,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from src.adapters.http.dependency_injection import get_current_user, get_db
+from src.application.dsl_functions.pipeline_runner import (
+    run_request_pipeline,
+    run_response_pipeline,
+)
 from src.application.ports.auth_port import AuthContext
 from src.infrastructure.persistence.sqlalchemy.generic_crud_repository import (
     GenericCrudRepository,
@@ -85,6 +92,19 @@ def _coerce_data(
     return coerced
 
 
+def _apply_defaults(
+    data: dict[str, Any], schema: dict[str, Any]
+) -> dict[str, Any]:
+    """Fill missing fields with their declared defaultValue from the schema."""
+    fields = schema.get("dataSource", {}).get("fields", [])
+    result = dict(data)
+    for field in fields:
+        field_id = field.get("id")
+        if field_id and field_id not in result and "defaultValue" in field:
+            result[field_id] = field["defaultValue"]
+    return result
+
+
 def _serialize_row(row: dict[str, Any]) -> dict[str, Any]:
     """Convert Decimal/datetime values to JSON-safe types."""
     result = {}
@@ -112,8 +132,28 @@ def list_entities(
     table_name = _get_table_name(schema, entity_name)
     repo = GenericCrudRepository(db)
     result = repo.list(table_name, auth.tenant_id, offset, limit)
-    result["items"] = [_serialize_row(r) for r in result["items"]]
+    result["items"] = [
+        run_response_pipeline(_serialize_row(r), schema)
+        for r in result["items"]
+    ]
     return result
+
+
+@router.get("/{entity_name}/{entity_id}")
+def get_entity(
+    entity_name: str,
+    entity_id: str,
+    auth: AuthContext = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Get a single entity row by ID."""
+    schema = _resolve_schema(db, entity_name)
+    table_name = _get_table_name(schema, entity_name)
+    repo = GenericCrudRepository(db)
+    result = repo.get_by_id(table_name, auth.tenant_id, entity_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return run_response_pipeline(_serialize_row(result), schema)
 
 
 @router.post("/{entity_name}")
@@ -126,11 +166,13 @@ def create_entity(
     """Create a new row for an entity."""
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
-    data = _coerce_data(body, schema)
+    data = _apply_defaults(body, schema)
+    data = _coerce_data(data, schema)
+    data = run_request_pipeline(data, schema)
     repo = GenericCrudRepository(db)
     result = repo.create(table_name, auth.tenant_id, data)
     db.commit()
-    return _serialize_row(result)
+    return run_response_pipeline(_serialize_row(result), schema)
 
 
 @router.put("/{entity_name}/{entity_id}")
@@ -145,12 +187,13 @@ def update_entity(
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
     data = _coerce_data(body, schema)
+    data = run_request_pipeline(data, schema)
     repo = GenericCrudRepository(db)
     result = repo.update(table_name, auth.tenant_id, entity_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Entity not found")
     db.commit()
-    return _serialize_row(result)
+    return run_response_pipeline(_serialize_row(result), schema)
 
 
 @router.delete("/{entity_name}/{entity_id}")

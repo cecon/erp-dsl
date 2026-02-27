@@ -64,6 +64,21 @@ class GenericCrudRepository:
             "limit": limit,
         }
 
+    def get_by_id(
+        self,
+        table_name: str,
+        tenant_id: str,
+        entity_id: str,
+    ) -> dict[str, Any] | None:
+        """Return a single row by ID for a tenant."""
+        table = self._get_table(table_name)
+        row = self.db.execute(
+            select(table)
+            .where(table.c.id == entity_id)
+            .where(table.c.tenant_id == tenant_id)
+        ).mappings().first()
+        return dict(row) if row else None
+
     def create(
         self,
         table_name: str,

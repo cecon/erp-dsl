@@ -23,7 +23,14 @@ PRODUCTS_PAGE_SCHEMA: dict[str, Any] = {
         "fields": [
             {"id": "name", "dbType": "string", "required": True},
             {"id": "price", "dbType": "decimal", "required": True},
-            {"id": "sku", "dbType": "string", "required": False},
+            {
+                "id": "sku",
+                "dbType": "string",
+                "required": False,
+                "transforms": [
+                    {"fn": "uppercase", "on": "request"},
+                ],
+            },
         ],
     },
     "components": [

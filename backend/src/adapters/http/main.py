@@ -49,15 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router.router, prefix="/auth", tags=["Auth"])
     app.include_router(pages_router.router, prefix="/pages", tags=["Pages"])
     
-    # Custom business routers
-    from src.adapters.http.routers import fiscal_rule_router
-    app.include_router(
-        fiscal_rule_router.router,
-        prefix="/fiscal_rules",
-        tags=["Fiscal Rules"],
-    )
-    
-    # Generic CRUD fallback
+    # Generic CRUD (covers all DSL-driven entities including fiscal_rules)
     app.include_router(
         generic_crud_router.router,
         prefix="/entities",
