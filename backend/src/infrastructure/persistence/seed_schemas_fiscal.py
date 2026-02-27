@@ -97,13 +97,43 @@ FISCAL_RULES_PAGE_SCHEMA: dict[str, Any] = {
         "fields": [
             {"id": "id_grupo_tributario", "dbType": "string", "required": True},
             {"id": "id_natureza_operacao", "dbType": "string", "required": True},
-            {"id": "uf_origem", "dbType": "string", "required": False},
-            {"id": "uf_destino", "dbType": "string", "required": False},
+            {
+                "id": "uf_origem",
+                "dbType": "string",
+                "required": False,
+                "validations": [
+                    {"rule": "maxLength", "value": 2},
+                ],
+            },
+            {
+                "id": "uf_destino",
+                "dbType": "string",
+                "required": False,
+                "validations": [
+                    {"rule": "maxLength", "value": 2},
+                ],
+            },
             {"id": "tipo_contribuinte_dest", "dbType": "string", "required": False},
-            {"id": "cfop", "dbType": "string", "required": False},
+            {
+                "id": "cfop",
+                "dbType": "string",
+                "required": False,
+                "validations": [
+                    {"rule": "pattern", "value": "^[0-9]{4}$", "message": "CFOP must be exactly 4 digits"},
+                ],
+            },
             {"id": "icms_cst", "dbType": "string", "required": False},
             {"id": "icms_csosn", "dbType": "string", "required": False},
-            {"id": "icms_aliquota", "dbType": "decimal", "required": False, "defaultValue": "0"},
+            {
+                "id": "icms_aliquota",
+                "dbType": "decimal",
+                "required": False,
+                "defaultValue": "0",
+                "validations": [
+                    {"rule": "min", "value": 0},
+                    {"rule": "max", "value": 100},
+                ],
+            },
             {"id": "icms_perc_reducao_bc", "dbType": "decimal", "required": False, "defaultValue": "0"},
             {"id": "pis_cst", "dbType": "string", "required": False},
             {"id": "cofins_cst", "dbType": "string", "required": False},

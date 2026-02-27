@@ -26,6 +26,7 @@ from fastapi.responses import JSONResponse
 from src.infrastructure.persistence.sqlalchemy.generic_crud_repository import (
     StaleDataError,
 )
+from src.application.dsl_functions.validators import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,18 @@ async def _handle_stale_data(
     )
 
 
+async def _handle_dsl_validation_error(
+    request: Request, exc: ValidationError
+) -> JSONResponse:
+    """Handle DSL field-level validation errors (422)."""
+    return _error_response(
+        status=422,
+        code="VALIDATION_ERROR",
+        message="Field validation failed",
+        details={"errors": exc.errors},
+    )
+
+
 async def _handle_generic_exception(
     request: Request, exc: Exception
 ) -> JSONResponse:
@@ -135,4 +148,5 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(HTTPException, _handle_http_exception)  # type: ignore[arg-type]
     app.add_exception_handler(RequestValidationError, _handle_validation_error)  # type: ignore[arg-type]
     app.add_exception_handler(StaleDataError, _handle_stale_data)  # type: ignore[arg-type]
+    app.add_exception_handler(ValidationError, _handle_dsl_validation_error)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, _handle_generic_exception)  # type: ignore[arg-type]

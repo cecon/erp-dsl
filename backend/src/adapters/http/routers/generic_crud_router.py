@@ -27,9 +27,9 @@ from src.application.dsl_functions.pipeline_runner import (
     run_request_pipeline,
     run_response_pipeline,
 )
+from src.application.dsl_functions.validators import validate_data
 from src.infrastructure.persistence.sqlalchemy.generic_crud_repository import (
     GenericCrudRepository,
-    StaleDataError,
 )
 from src.infrastructure.persistence.sqlalchemy.models import (
     Base,
@@ -176,6 +176,7 @@ def create_entity(
     schema = _resolve_schema(db, entity_name)
     table_name = _get_table_name(schema, entity_name)
     data = _apply_defaults(body, schema)
+    validate_data(data, schema, context="create")
     data = _coerce_data(data, schema)
     data = run_request_pipeline(data, schema)
     repo = GenericCrudRepository(db)
@@ -211,6 +212,8 @@ def update_entity(
                 status_code=400,
                 detail="_version must be an integer",
             )
+
+    validate_data(body, schema, context="update")
 
     data = _coerce_data(body, schema)
     data = run_request_pipeline(data, schema)

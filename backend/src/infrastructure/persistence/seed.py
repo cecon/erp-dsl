@@ -51,13 +51,18 @@ SEED_PAGES = [
 
 
 def _seed_page(session: Session, page_key: str, schema: dict) -> None:
-    """Create a published page version if it doesn't exist."""
+    """Create or update a published page version."""
     stmt = select(PageVersionModel).where(
         PageVersionModel.page_key == page_key,
         PageVersionModel.scope == "global",
         PageVersionModel.status == "published",
     )
-    if session.execute(stmt).scalar_one_or_none():
+    existing = session.execute(stmt).scalar_one_or_none()
+    if existing:
+        # Upsert: update schema_json if it changed
+        if existing.schema_json != schema:
+            existing.schema_json = schema
+            session.commit()
         return
 
     page = PageVersionModel(
