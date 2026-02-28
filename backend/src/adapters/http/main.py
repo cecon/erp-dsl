@@ -58,14 +58,14 @@ def create_app() -> FastAPI:
     # Agent endpoints (product enrichment)
     app.include_router(
         agent_router.router,
-        prefix="/api/agent",
+        prefix="/agent",
         tags=["Agent"],
     )
 
     # Otto universal chat
     app.include_router(
         otto_router.router,
-        prefix="/api/otto",
+        prefix="/otto",
         tags=["Otto"],
     )
 
