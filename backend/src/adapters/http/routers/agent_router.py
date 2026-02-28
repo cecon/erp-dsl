@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.adapters.http.dependency_injection import get_current_user, get_tenant_db
+from src.adapters.http.dependency_injection import get_current_user, get_tenant_db, get_db, auth_adapter
 from src.application.agent.llm_provider import GeminiProvider
 from src.application.agent.orchestrator import run_agent, run_agent_stream
 from src.application.agent.prompts.product_enrich import build_system_prompt
@@ -145,8 +145,10 @@ async def product_enrich(
 @router.get("/product-enrich/stream")
 async def product_enrich_stream(
     user_input: str = Query(..., description="Natural-language product description or EAN"),
-    auth: AuthContext = Depends(get_current_user),
-    db: Session = Depends(get_tenant_db),
+    # SECURITY TODO: substituir por one-time token com TTL curto —
+    # query param expõe JWT em logs de servidor.
+    token: str = Query(..., description="JWT token (EventSource cannot send headers)"),
+    db: Session = Depends(get_db),
 ) -> StreamingResponse:
     """Enrich product data using the AI agent (SSE streaming mode).
 
@@ -154,7 +156,15 @@ async def product_enrich_stream(
     Each event is ``data: {JSON}\\n\\n``.
     Final event contains ``done: true`` with the product draft.
     """
+    # Manually verify token (EventSource sends it as a query param)
+    auth = auth_adapter.verify_token(token)
+    if auth is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
     tenant_id = auth.tenant_id
+    db.info["tenant_id"] = tenant_id
 
     llm = _get_active_llm(db, tenant_id)
     tenant_schema = _get_tenant_schema(db, tenant_id)

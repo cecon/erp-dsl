@@ -13,6 +13,7 @@ from src.adapters.http.routers import (
     agent_router,
     auth_router,
     generic_crud_router,
+    otto_router,
     pages_router,
 )
 from src.infrastructure.config.settings import settings
@@ -59,6 +60,13 @@ def create_app() -> FastAPI:
         agent_router.router,
         prefix="/api/agent",
         tags=["Agent"],
+    )
+
+    # Otto universal chat
+    app.include_router(
+        otto_router.router,
+        prefix="/api/otto",
+        tags=["Otto"],
     )
 
     # Standardized error handling

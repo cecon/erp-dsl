@@ -1,4 +1,4 @@
-# ERP-DSL Platform
+# AutoSystem
 
 Multi-tenant configurable platform with page versioning engine.
 

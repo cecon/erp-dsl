@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 480  # 8 hours
 
     # App
-    app_name: str = "ERP-DSL Platform"
+    app_name: str = "AutoSystem"
     debug: bool = False
     cors_origins: list[str] = ["http://localhost:5173"]
 

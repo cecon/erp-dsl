@@ -12,6 +12,7 @@ import {
   ThemeSwitch,
   SegmentedField,
 } from '../../components/form';
+import { ProductEnrichModal } from '../../features/agent/ProductEnrichModal';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -48,6 +49,9 @@ export const componentRegistry: Record<string, ComponentType<any>> = {
   theme_switch: ThemeSwitch,
   segmented: SegmentedField,
   hidden: () => null,
+
+  /* ── Agent modals ─────────────────────────────────────── */
+  'agent:product-enrich': ProductEnrichModal,
 };
 
 export function getComponent(type: string): ComponentType<any> | null {

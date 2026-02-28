@@ -50,6 +50,7 @@ PRODUCTS_PAGE_SCHEMA: dict[str, Any] = {
         {"id": "col-sku", "key": "sku", "label": "SKU"},
     ],
     "actions": [
+        {"id": "action-agent-enrich", "type": "agent", "label": "Novo com IA", "agent": "product-enrich"},
         {"id": "action-create", "type": "create", "label": "New Product"},
         {"id": "action-edit", "type": "edit", "label": "Edit"},
         {"id": "action-delete", "type": "delete", "label": "Delete"},
@@ -61,8 +62,8 @@ PRODUCTS_PAGE_SCHEMA: dict[str, Any] = {
 SIDEBAR_SCHEMA: dict[str, Any] = {
     "title": "_sidebar",
     "brand": {
-        "icon": "E",
-        "text": "ERP-DSL",
+        "icon": "A",
+        "text": "AutoSystem",
     },
     "sections": [
         {
@@ -151,7 +152,7 @@ SIDEBAR_SCHEMA: dict[str, Any] = {
         },
     ],
     "footer": {
-        "text": "ERP-DSL Platform v0.1.0",
+        "text": "AutoSystem v0.1.0",
     },
 }
 

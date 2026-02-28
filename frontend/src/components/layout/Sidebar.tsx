@@ -102,7 +102,7 @@ export function Sidebar() {
         </div>
         {!collapsed && (
           <div className="sidebar-brand-text">
-            {schema?.brand?.text ?? 'ERP-DSL'}
+            {schema?.brand?.text ?? 'AutoSystem'}
           </div>
         )}
       </div>
@@ -122,7 +122,7 @@ export function Sidebar() {
       <div className="sidebar-footer">
         {!collapsed && (
           <Text size="xs" c="dimmed">
-            {schema?.footer?.text ?? 'ERP-DSL Platform'}
+            {schema?.footer?.text ?? 'AutoSystem'}
           </Text>
         )}
       </div>

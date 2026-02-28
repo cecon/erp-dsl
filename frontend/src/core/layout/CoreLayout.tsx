@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Header } from '../../components/layout/Header';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { ThemeDrawer } from '../../components/layout/ThemeDrawer';
+import { OttoFab, OttoPanel, useOttoContext } from '../../features/otto';
 import { useThemeStore } from '../../state/themeStore';
 
 interface CoreLayoutProps {
@@ -11,6 +12,7 @@ interface CoreLayoutProps {
 
 const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 80;
+const OTTO_ASIDE_WIDTH = 400;
 
 /** Maps Mantine color names to their primary hex values for CSS custom props. */
 const COLOR_HEX: Record<string, string> = {
@@ -27,6 +29,7 @@ export function CoreLayout({ children }: CoreLayoutProps) {
   const collapsed = useThemeStore((s) => s.sidebarCollapsed);
   const primaryColor = useThemeStore((s) => s.primaryColor);
   const navWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+  const { opened: ottoOpened } = useOttoContext();
 
   // Sync CSS custom property with selected theme color
   useEffect(() => {
@@ -43,6 +46,11 @@ export function CoreLayout({ children }: CoreLayoutProps) {
     <AppShell
       header={{ height: 56 }}
       navbar={{ width: navWidth, breakpoint: 'sm' }}
+      aside={{
+        width: OTTO_ASIDE_WIDTH,
+        breakpoint: 'sm',
+        collapsed: { desktop: !ottoOpened, mobile: !ottoOpened },
+      }}
       padding="xl"
       transitionDuration={200}
       transitionTimingFunction="ease"
@@ -50,6 +58,7 @@ export function CoreLayout({ children }: CoreLayoutProps) {
         main: {
           background: 'var(--content-bg)',
           minHeight: '100vh',
+          transition: 'padding-inline-end 200ms ease',
         },
         header: {
           background: 'var(--header-bg)',
@@ -59,6 +68,11 @@ export function CoreLayout({ children }: CoreLayoutProps) {
           background: 'var(--sidebar-bg)',
           borderRight: 'none',
           transition: 'width 200ms ease',
+        },
+        aside: {
+          background: 'var(--card-bg)',
+          borderLeft: '1px solid var(--border-default)',
+          transition: 'width 200ms ease, transform 200ms ease',
         },
       }}
     >
@@ -74,7 +88,14 @@ export function CoreLayout({ children }: CoreLayoutProps) {
         <div className="fade-in">{children}</div>
       </AppShell.Main>
 
+      {ottoOpened && (
+        <AppShell.Aside>
+          <OttoPanel />
+        </AppShell.Aside>
+      )}
+
       <ThemeDrawer />
+      <OttoFab />
     </AppShell>
   );
 }

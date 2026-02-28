@@ -1,18 +1,20 @@
 import { Alert, Button, Group, Loader, Modal, Stack, Text } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../services/api';
 import { DynamicForm } from './DynamicForm';
 import { DynamicMrtGrid } from '../../components/grid/DynamicMrtGrid';
-
+import { componentRegistry } from './ComponentRegistry';
+import { useOttoContext } from '../../features/otto';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface SchemaAction {
   id: string;
-  type: 'create' | 'edit' | 'delete';
+  type: 'create' | 'edit' | 'delete' | 'agent';
   label: string;
   navigateTo?: string;
+  agent?: string;
 }
 
 interface DataSource {
@@ -49,6 +51,8 @@ export function PageRenderer() {
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [agentModalOpen, setAgentModalOpen] = useState(false);
+  const [agentKey, setAgentKey] = useState<string | null>(null);
   const pageSize = 20;
 
   /* ── Schema query ───────────────────────────────────────────── */
@@ -63,6 +67,16 @@ export function PageRenderer() {
   const dataSource = schema?.dataSource;
   const endpoint = dataSource?.endpoint ?? `/${pageKey}`;
 
+  /* ── Sync Claw context with current page ────────────────────── */
+  const { setContext: setOttoContext } = useOttoContext();
+  useEffect(() => {
+    setOttoContext({
+      pageKey: pageKey ?? null,
+      pageTitle: schema?.title ?? pageKey ?? null,
+      entityEndpoint: endpoint ?? null,
+    });
+  }, [pageKey, schema?.title, endpoint, setOttoContext]);
+
   /* ── Action labels from schema ──────────────────────────────── */
 
   const findAction = (type: string): SchemaAction | undefined =>
@@ -70,6 +84,7 @@ export function PageRenderer() {
 
   const createAction = findAction('create');
   const editAction = findAction('edit');
+  const agentActions = schema?.actions?.filter((a) => a.type === 'agent') ?? [];
 
   /* ── Data query (uses schema.dataSource.endpoint) ───────────── */
 
@@ -210,18 +225,35 @@ export function PageRenderer() {
           )}
         </div>
         {createAction && !isFormLayout && (
-          <Button
-            onClick={() => {
-              if (createAction.navigateTo) {
-                window.location.href = createAction.navigateTo;
-              } else {
-                setEditingItem(null);
-                setFormOpen(true);
-              }
-            }}
-          >
-            + {createAction.label}
-          </Button>
+          <Group gap="sm">
+            {agentActions.map((action) => {
+              return (
+                <Button
+                  key={action.id}
+                  variant="gradient"
+                  gradient={{ from: 'blue', to: 'cyan', deg: 90 }}
+                  onClick={() => {
+                    setAgentKey(action.agent ?? null);
+                    setAgentModalOpen(true);
+                  }}
+                >
+                  ✨ {action.label}
+                </Button>
+              );
+            })}
+            <Button
+              onClick={() => {
+                if (createAction.navigateTo) {
+                  window.location.href = createAction.navigateTo;
+                } else {
+                  setEditingItem(null);
+                  setFormOpen(true);
+                }
+              }}
+            >
+              + {createAction.label}
+            </Button>
+          </Group>
         )}
       </div>
 
@@ -290,6 +322,23 @@ export function PageRenderer() {
           <Loader color="blue" size="sm" />
         </Group>
       )}
+
+      {/* Agent Modal (dynamic from ComponentRegistry) */}
+      {agentKey && (() => {
+        const AgentComponent = componentRegistry[`agent:${agentKey}`];
+        if (!AgentComponent) return null;
+        return (
+          <AgentComponent
+            opened={agentModalOpen}
+            onClose={() => {
+              setAgentModalOpen(false);
+              setAgentKey(null);
+            }}
+            endpoint={endpoint}
+            queryKey={pageKey}
+          />
+        );
+      })()}
     </Stack>
   );
 }

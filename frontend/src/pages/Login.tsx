@@ -46,8 +46,8 @@ export function Login() {
     <div className="login-wrapper">
       <div className="login-card">
         <div className="login-logo">
-          <div className="login-logo-icon">E</div>
-          <div className="login-logo-text">ERP-DSL</div>
+          <div className="login-logo-icon">A</div>
+          <div className="login-logo-text">AutoSystem</div>
         </div>
         <div className="login-subtitle">
           Enterprise Management Platform
