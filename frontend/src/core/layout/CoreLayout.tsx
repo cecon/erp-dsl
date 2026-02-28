@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { Header } from '../../components/layout/Header';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { ThemeDrawer } from '../../components/layout/ThemeDrawer';
-import { OttoFab, OttoPanel, useOttoContext } from '../../features/otto';
+import { OttoPanel, useOttoContext } from '../../features/otto';
 import { useThemeStore } from '../../state/themeStore';
 
 interface CoreLayoutProps {
@@ -95,7 +95,6 @@ export function CoreLayout({ children }: CoreLayoutProps) {
       )}
 
       <ThemeDrawer />
-      <OttoFab />
     </AppShell>
   );
 }

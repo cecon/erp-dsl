@@ -12,12 +12,15 @@ interface ThemeState {
   radius: RadiusSize;
   fontSize: FontSize;
   sidebarCollapsed: boolean;
+  themeDrawerOpened: boolean;
   setPrimaryColor: (color: PrimaryColor) => void;
   setColorScheme: (scheme: ColorScheme) => void;
   toggleColorScheme: () => void;
   setRadius: (radius: RadiusSize) => void;
   setFontSize: (size: FontSize) => void;
   toggleSidebar: () => void;
+  openThemeDrawer: () => void;
+  closeThemeDrawer: () => void;
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -28,6 +31,7 @@ export const useThemeStore = create<ThemeState>()(
       radius: 'md',
       fontSize: 'md',
       sidebarCollapsed: false,
+      themeDrawerOpened: false,
       setPrimaryColor: (primaryColor) => set({ primaryColor }),
       setColorScheme: (colorScheme) => set({ colorScheme }),
       toggleColorScheme: () =>
@@ -36,6 +40,8 @@ export const useThemeStore = create<ThemeState>()(
       setFontSize: (fontSize) => set({ fontSize }),
       toggleSidebar: () =>
         set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      openThemeDrawer: () => set({ themeDrawerOpened: true }),
+      closeThemeDrawer: () => set({ themeDrawerOpened: false }),
     }),
     { name: 'erp-dsl-theme' }
   )

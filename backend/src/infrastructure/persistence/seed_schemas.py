@@ -50,7 +50,6 @@ PRODUCTS_PAGE_SCHEMA: dict[str, Any] = {
         {"id": "col-sku", "key": "sku", "label": "SKU"},
     ],
     "actions": [
-        {"id": "action-agent-enrich", "type": "agent", "label": "Novo com IA", "agent": "product-enrich"},
         {"id": "action-create", "type": "create", "label": "New Product"},
         {"id": "action-edit", "type": "edit", "label": "Edit"},
         {"id": "action-delete", "type": "delete", "label": "Delete"},

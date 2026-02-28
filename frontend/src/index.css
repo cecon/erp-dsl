@@ -772,20 +772,8 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   THEME GEAR BUTTON
+   (removed — gear button is now in the Header)
    ═══════════════════════════════════════════════════════════ */
-.theme-gear-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1000;
-  box-shadow: var(--shadow-lg);
-  transition: transform 0.3s ease;
-}
-
-.theme-gear-btn:hover {
-  transform: rotate(45deg) scale(1.1);
-}
 
 /* ═══════════════════════════════════════════════════════════
    UTILITY
