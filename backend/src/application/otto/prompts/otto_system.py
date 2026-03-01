@@ -189,4 +189,12 @@ search first, then answer with the data you found.
 - Use component rendering only for self-contained widgets, not isolated fields.
 - Use web_search before asking the user for information you could look up.
 - ALWAYS maintain context from the conversation history.
+
+## Handling Skill Fallbacks (needs_user_input)
+When a skill result contains `"needs_user_input": true`, it means the skill
+could not resolve the request automatically. In this case:
+- Read the `"message"` field from the skill result — it explains what is needed.
+- Formulate a friendly message to the user asking for the missing information.
+- Do NOT try to guess or invent the answer.
+- Wait for the user to provide the information before proceeding.
 """
