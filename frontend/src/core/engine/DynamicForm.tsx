@@ -1,4 +1,4 @@
-import { Button, Group, Stack, Text } from '@mantine/core';
+import { Alert, Button, Group, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { getComponent } from './ComponentRegistry';
 
@@ -51,9 +51,15 @@ export function DynamicForm({
           const Component = getComponent(field.type);
           if (!Component) {
             return (
-              <Text key={field.id} c="red" size="sm">
-                Unknown component type: {field.type}
-              </Text>
+              <Alert
+                key={field.id}
+                color="yellow"
+                title={`Componente não registrado: ${field.type}`}
+                radius="md"
+              >
+                O tipo de campo <strong>{field.type}</strong> não está disponível
+                no ComponentRegistry. Verifique se o componente foi registrado.
+              </Alert>
             );
           }
 
@@ -80,3 +86,4 @@ export function DynamicForm({
     </form>
   );
 }
+

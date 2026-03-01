@@ -132,6 +132,18 @@ SIDEBAR_SCHEMA: dict[str, Any] = {
             ],
         },
         {
+            "id": "automacao",
+            "label": "Automação",
+            "items": [
+                {
+                    "id": "nav-workflows",
+                    "label": "Workflows",
+                    "icon": "workflow",
+                    "path": "/pages/workflows",
+                },
+            ],
+        },
+        {
             "id": "settings",
             "label": "Settings",
             "items": [

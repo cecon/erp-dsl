@@ -5,6 +5,7 @@ Reuses the same pattern as the product-enrich agent but with:
 - Message-style output for conversational UX
 - Streaming via async generator for SSE
 - Form request support for structured user input
+- Conversation history for multi-turn context
 
 No external agent frameworks — pure Python.
 """
@@ -18,6 +19,10 @@ from typing import AsyncGenerator
 from src.application.agent import skill_registry
 from src.application.agent.llm_provider import LLMProvider
 from src.application.otto.prompts.otto_system import build_otto_system_prompt
+from src.application.workflows.executor import execute_workflow
+from src.infrastructure.persistence.sqlalchemy.workflow_repository_impl import (
+    SqlAlchemyWorkflowRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +43,42 @@ def _parse_llm_response(raw_response: str) -> dict | None:
         return None
 
 
+async def _try_workflow_command(
+    user_input: str,
+    context: dict,
+) -> AsyncGenerator[dict, None] | None:
+    """If *user_input* starts with ``/``, try to find a matching workflow.
+
+    Returns an async generator of SSE events if a workflow is found,
+    or ``None`` to fall through to the normal LLM path.
+
+    Text after the command (e.g. ``/cmd arg1 arg2``) is extracted and
+    injected into the context as ``user_input`` so the executor can
+    resolve ``{input}`` placeholders in step parameters.
+    """
+    if not user_input.startswith("/"):
+        return None
+
+    db = context.get("db")
+    tenant_id = context.get("tenant_id")
+    if db is None or not tenant_id:
+        return None
+
+    parts = user_input.split(maxsplit=1)
+    command = parts[0]  # e.g. "/cadastrar-produto"
+    args_text = parts[1] if len(parts) > 1 else ""
+
+    repo = SqlAlchemyWorkflowRepository(db)
+    workflow = repo.get_by_command(command, tenant_id)
+
+    if workflow is None:
+        return None
+
+    # Inject the text after the command into context
+    ctx_with_input = {**context, "user_input": args_text}
+    return execute_workflow(workflow, ctx_with_input)
+
+
 async def run_otto_stream(
     user_input: str,
     tenant_id: str,
@@ -45,14 +86,29 @@ async def run_otto_stream(
     page_key: str | None = None,
     page_schema: dict | None = None,
     context: dict | None = None,
+    history: list[dict] | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Run the Otto ReAct loop as an async generator for SSE streaming.
 
     Yields dicts suitable for SSE ``data:`` events.
     Each event has ``role``, ``content``, and ``done`` fields.
+
+    Args:
+        history: Previous conversation messages [{role, content}] for
+                 multi-turn context. Roles should be 'user' or 'assistant'
+                 (mapped to 'model' for Gemini).
     """
     context = context or {}
+    history = history or []
 
+    # ── Workflow command interception ────────────────────────
+    wf_gen = await _try_workflow_command(user_input, context)
+    if wf_gen is not None:
+        async for event in wf_gen:
+            yield event
+        return
+
+    # ── Normal LLM path ─────────────────────────────────────
     skills = skill_registry.list_skills()
     system_prompt = build_otto_system_prompt(
         skills=skills,
@@ -60,10 +116,20 @@ async def run_otto_stream(
         page_schema=page_schema,
     )
 
+    # Build messages: system + history + current user input
     messages: list[dict] = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_input},
     ]
+
+    # Append conversation history (map 'assistant' → 'model' for Gemini)
+    for msg in history:
+        role = msg.get("role", "user")
+        if role == "assistant":
+            role = "model"
+        messages.append({"role": role, "content": msg.get("content", "")})
+
+    # Append current user message
+    messages.append({"role": "user", "content": user_input})
 
     for iteration in range(1, MAX_ITERATIONS + 1):
         # ── Call LLM ────────────────────────────────────────────
@@ -101,8 +167,21 @@ async def run_otto_stream(
                 "data": parsed.get("data", {}),
                 "done": False,
             }
-            # Pause — wait for user form submission
             return
+
+        # ── Handle component render ─────────────────────────────
+        if parsed.get("component"):
+            yield {
+                "role": "component",
+                "component": parsed["component"],
+                "props": parsed.get("props", {}),
+                "content": parsed.get("message", ""),
+                "done": parsed.get("done", False),
+            }
+            if parsed.get("done"):
+                return
+            messages.append({"role": "model", "content": raw_response})
+            continue
 
         # ── Handle "done" ───────────────────────────────────────
         if parsed.get("done"):
@@ -119,10 +198,8 @@ async def run_otto_stream(
             yield {
                 "role": "assistant",
                 "content": parsed["message"],
-                "done": False,
+                "done": True,
             }
-            messages.append({"role": "model", "content": raw_response})
-            yield {"role": "assistant", "content": "", "done": True}
             return
 
         # ── Handle skill action ─────────────────────────────────

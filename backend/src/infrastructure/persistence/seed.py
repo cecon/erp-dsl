@@ -24,6 +24,10 @@ from src.infrastructure.persistence.seed_schemas_fiscal import (
     TAX_GROUPS_FORM_SCHEMA,
     THEME_CONFIG_SCHEMA,
 )
+from src.infrastructure.persistence.seed_schemas_workflows import (
+    WORKFLOWS_PAGE_SCHEMA,
+    WORKFLOWS_FORM_SCHEMA,
+)
 from src.infrastructure.persistence.sqlalchemy.models import (
     PageVersionModel,
     TenantModel,
@@ -43,6 +47,8 @@ SEED_PAGES = [
     ("operation_natures_form", OPERATION_NATURES_FORM_SCHEMA),
     ("fiscal_rules", FISCAL_RULES_PAGE_SCHEMA),
     ("fiscal_rules_form", FISCAL_RULES_FORM_SCHEMA),
+    ("workflows", WORKFLOWS_PAGE_SCHEMA),
+    ("workflows_form", WORKFLOWS_FORM_SCHEMA),
     ("_sidebar", SIDEBAR_SCHEMA),
     ("_header", HEADER_SCHEMA),
     ("dashboard", DASHBOARD_SCHEMA),
@@ -111,5 +117,11 @@ def seed_database(session: Session) -> None:
     # 3. Seed all page schemas
     for page_key, schema in SEED_PAGES:
         _seed_page(session, page_key, schema)
+
+    # 4. Seed NCM catalog
+    from src.infrastructure.persistence.seed_ncm import seed_ncm
+    ncm_count = seed_ncm(session)
+    if ncm_count:
+        print(f"  Seeded {ncm_count} NCM records")
 
     session.commit()

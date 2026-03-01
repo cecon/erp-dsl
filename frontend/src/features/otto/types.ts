@@ -1,6 +1,6 @@
 /* ── Otto shared types ────────────────────────────────────────────── */
 
-export type OttoRole = 'user' | 'assistant' | 'tool' | 'system' | 'form';
+export type OttoRole = 'user' | 'assistant' | 'tool' | 'system' | 'form' | 'component';
 
 /** Schema field definition — matches DynamicForm's field shape. */
 export interface OttoFormField {
@@ -25,6 +25,10 @@ export interface OttoMessage {
   formData?: Record<string, unknown>;
   /** Set to true after the user submits the form. */
   formSubmitted?: boolean;
+  /** Present when role === 'component' — registry key to look up. */
+  componentName?: string;
+  /** Present when role === 'component' — props to pass to the component. */
+  componentProps?: Record<string, unknown>;
 }
 
 export interface OttoContext {

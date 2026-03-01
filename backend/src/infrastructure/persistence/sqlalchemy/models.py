@@ -130,3 +130,35 @@ class AuditLogModel(Base):
         default=lambda: datetime.now(timezone.utc),
     )
     version = Column(Integer, nullable=False, default=1)
+
+
+class WorkflowModel(Base):
+    """Persists workflow definitions with steps as JSON."""
+    __tablename__ = "workflows"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "command", name="uq_workflow_tenant_command",
+        ),
+    )
+
+    id = Column(String(36), primary_key=True)
+    tenant_id = Column(String(36), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    command = Column(String(64), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    steps = Column(JSON, nullable=False, default=list)
+    status = Column(
+        String(16),
+        nullable=False,
+        default="draft",
+    )
+    version = Column(Integer, nullable=False, default=1)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )

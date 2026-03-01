@@ -1,13 +1,17 @@
 /**
  * OttoMessage — individual chat bubble component.
  *
- * Renders user, assistant, tool, system, and FORM messages.
+ * Renders user, assistant, tool, system, form, and COMPONENT messages.
  * When role === 'form', renders DynamicForm inline.
+ * When role === 'component', resolves from ComponentRegistry by name.
  */
 
 import { Text } from '@mantine/core';
 import { DynamicForm } from '../../core/engine/DynamicForm';
+import { getComponent } from '../../core/engine/ComponentRegistry';
 import type { OttoMessage as OttoMessageType } from './types';
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface OttoMessageProps {
   message: OttoMessageType;
@@ -15,7 +19,11 @@ interface OttoMessageProps {
 }
 
 export function OttoMessage({ message, onFormSubmit }: OttoMessageProps) {
-  const { role, content, toolName, streaming, formSchema, formData, formSubmitted } = message;
+  const {
+    role, content, toolName, streaming,
+    formSchema, formData, formSubmitted,
+    componentName, componentProps,
+  } = message;
 
   if (role === 'user') {
     return (
@@ -51,6 +59,35 @@ export function OttoMessage({ message, onFormSubmit }: OttoMessageProps) {
         </div>
       );
     }
+  }
+
+  if (role === 'component') {
+    if (!componentName) {
+      return (
+        <div className="otto-msg otto-msg--system">
+          <Text size="xs" c="dimmed" ta="center">Componente sem nome especificado</Text>
+        </div>
+      );
+    }
+
+    const Component = getComponent(componentName);
+    if (!Component) {
+      console.warn(`[Otto] Component "${componentName}" not found in ComponentRegistry`);
+      return (
+        <div className="otto-msg otto-msg--assistant">
+          <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+            {content || `Componente "${componentName}" não está disponível no momento.`}
+          </Text>
+        </div>
+      );
+    }
+
+    return (
+      <div className="otto-msg otto-msg--component">
+        {content && <Text size="sm" mb="sm" fw={500}>{content}</Text>}
+        <Component {...(componentProps || {})} />
+      </div>
+    );
   }
 
   if (role === 'tool') {

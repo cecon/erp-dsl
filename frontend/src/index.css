@@ -1053,6 +1053,22 @@ body {
   max-width: 90%;
 }
 
+/* ── Component Message ──────────────────────────────────── */
+.otto-msg--component {
+  align-self: flex-start;
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 14px 16px;
+  max-width: 95%;
+  width: 95%;
+}
+
+[data-mantine-color-scheme='light'] .otto-msg--component {
+  background: #f5f3ff;
+}
+
 /* ── Streaming Cursor ────────────────────────────────────── */
 .otto-msg-cursor {
   display: inline-block;

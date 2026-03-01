@@ -13,6 +13,7 @@ import {
   SegmentedField,
 } from '../../components/form';
 import { ProductEnrichModal } from '../../features/agent/ProductEnrichModal';
+import { WorkflowStepEditorField } from '../../features/workflows';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -52,8 +53,16 @@ export const componentRegistry: Record<string, ComponentType<any>> = {
 
   /* ── Agent modals ─────────────────────────────────────── */
   'agent:product-enrich': ProductEnrichModal,
+
+  /* ── Workflow editor ──────────────────────────────────── */
+  'workflow_step_editor': WorkflowStepEditorField,
 };
 
 export function getComponent(type: string): ComponentType<any> | null {
   return componentRegistry[type] ?? null;
+}
+
+/** Returns the list of all registered component names. */
+export function listComponents(): string[] {
+  return Object.keys(componentRegistry);
 }

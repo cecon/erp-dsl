@@ -15,6 +15,7 @@ from src.adapters.http.routers import (
     generic_crud_router,
     otto_router,
     pages_router,
+    workflow_router,
 )
 from src.infrastructure.config.settings import settings
 
@@ -67,6 +68,13 @@ def create_app() -> FastAPI:
         otto_router.router,
         prefix="/otto",
         tags=["Otto"],
+    )
+
+    # Workflows
+    app.include_router(
+        workflow_router.router,
+        prefix="/workflows",
+        tags=["Workflows"],
     )
 
     # Standardized error handling
