@@ -203,11 +203,11 @@ async def _strategy_web(descricao: str, db, ncm_table) -> dict | None:
 
     Returns a result dict if valid NCM codes are found, else ``None``.
     """
-    from src.application.agent.skills.web_search import web_search
+    from src.application.agent.skills.web_search import web_search as _web_search_fn
 
     query = f"NCM {descricao} Brasil"
     try:
-        web_result = await web_search({"query": query, "max_results": 5}, {})
+        web_result = await _web_search_fn({"query": query, "max_results": 5}, {})
     except Exception as exc:
         logger.warning("classify_ncm web search failed: %s", exc)
         return None
