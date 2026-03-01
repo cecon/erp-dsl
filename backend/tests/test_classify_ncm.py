@@ -2,7 +2,8 @@
 
 Tests use lightweight mocks to avoid hitting the real database or web.
 The web_search module is stubbed in sys.modules before importing classify_ncm
-to avoid the bs4 dependency.
+to avoid the bs4 dependency.  SQLAlchemy's ``select`` and ``or_`` are also
+patched so we don't need real Column objects.
 """
 
 from __future__ import annotations
@@ -22,7 +23,6 @@ _ws_mock = AsyncMock(return_value={"results": []})
 _ws_module.web_search = _ws_mock  # type: ignore[attr-defined]
 sys.modules["src.application.agent.skills.web_search"] = _ws_module
 
-# Also stub bs4 so the import chain doesn't break
 if "bs4" not in sys.modules:
     _bs4_stub = types.ModuleType("bs4")
     _bs4_stub.BeautifulSoup = MagicMock()  # type: ignore[attr-defined]
@@ -30,34 +30,8 @@ if "bs4" not in sys.modules:
 
 
 # ---------------------------------------------------------------------------
-# Helpers to build a fake NCM table + DB session
+# Helpers
 # ---------------------------------------------------------------------------
-
-def _make_fake_ncm_table():
-    """Return a tiny fake table object with column accessors for WHERE clauses."""
-
-    class _Col:
-        def __init__(self, name: str):
-            self.name = name
-
-        def ilike(self, pattern: str):
-            return ("ilike", self.name, pattern)
-
-        def startswith(self, prefix: str):
-            return ("startswith", self.name, prefix)
-
-        def __eq__(self, other):
-            return ("eq", self.name, other)
-
-    class _Columns:
-        codigo = _Col("codigo")
-        descricao = _Col("descricao")
-        sujeito_is = _Col("sujeito_is")
-
-    table = MagicMock()
-    table.c = _Columns()
-    return table
-
 
 def _make_fake_db(rows: list[dict]):
     """Return a MagicMock session whose execute().mappings().all() returns *rows*."""
@@ -88,7 +62,6 @@ NCM_ROW_2202 = {
 def test_web_strategy_finds_ncm():
     """Strategy 1 (web) should return candidates with source='web'."""
 
-    fake_table = _make_fake_ncm_table()
     fake_db = _make_fake_db([NCM_ROW_2202])
 
     web_result = {
@@ -101,13 +74,23 @@ def test_web_strategy_finds_ncm():
         ]
     }
 
-    # Configure the stubbed web_search to return our test data
     _ws_module.web_search = AsyncMock(return_value=web_result)
 
+    # Mock select & or_ so SQLAlchemy doesn't validate column types
+    fake_select = MagicMock()
+    fake_stmt = MagicMock()
+    fake_select.return_value = fake_stmt
+    fake_stmt.where.return_value = fake_stmt
+    fake_stmt.limit.return_value = fake_stmt
+
     async def _run():
-        with patch(
-            "src.application.agent.skills.classify_ncm.Base"
-        ) as mock_base:
+        with (
+            patch("src.application.agent.skills.classify_ncm.Base") as mock_base,
+            patch("src.application.agent.skills.classify_ncm.select", fake_select),
+            patch("src.application.agent.skills.classify_ncm.or_", MagicMock()),
+        ):
+            # Build a minimal fake table with MagicMock columns
+            fake_table = MagicMock()
             mock_base.metadata.tables.get.return_value = fake_table
 
             from src.application.agent.skills.classify_ncm import classify_ncm
@@ -126,34 +109,30 @@ def test_web_strategy_finds_ncm():
 def test_local_strategy_when_web_fails():
     """Strategy 2 (local) should kick in when web returns nothing useful."""
 
-    fake_table = _make_fake_ncm_table()
-    fake_db = MagicMock()
-    call_count = {"n": 0}
-
-    no_rows_mock = MagicMock()
-    no_rows_mock.mappings.return_value.all.return_value = []
-    yes_rows_mock = MagicMock()
-    yes_rows_mock.mappings.return_value.all.return_value = [NCM_ROW_2202]
-
-    def _side_effect(*_a, **_kw):
-        call_count["n"] += 1
-        if call_count["n"] <= 2:  # web queries return empty
-            return no_rows_mock
-        return yes_rows_mock
-
-    fake_db.execute.side_effect = _side_effect
-
-    # Web returns results but with NO 8-digit NCM codes in the text
+    # Web returns results with NO 8-digit NCM codes
     _ws_module.web_search = AsyncMock(return_value={
         "results": [
             {"title": "Algo", "url": "", "snippet": "nenhum código aqui"}
         ]
     })
 
+    fake_select = MagicMock()
+    fake_stmt = MagicMock()
+    fake_select.return_value = fake_stmt
+    fake_stmt.where.return_value = fake_stmt
+    fake_stmt.limit.return_value = fake_stmt
+
+    # Track db.execute calls: web strategy won't call db (no NCM codes in text),
+    # so all calls come from local strategy
+    fake_db = _make_fake_db([NCM_ROW_2202])
+
     async def _run():
-        with patch(
-            "src.application.agent.skills.classify_ncm.Base"
-        ) as mock_base:
+        with (
+            patch("src.application.agent.skills.classify_ncm.Base") as mock_base,
+            patch("src.application.agent.skills.classify_ncm.select", fake_select),
+            patch("src.application.agent.skills.classify_ncm.or_", MagicMock()),
+        ):
+            fake_table = MagicMock()
             mock_base.metadata.tables.get.return_value = fake_table
 
             from src.application.agent.skills.classify_ncm import classify_ncm
@@ -171,15 +150,23 @@ def test_local_strategy_when_web_fails():
 def test_fallback_needs_user_input():
     """Strategy 3 (fallback) should return needs_user_input when nothing matches."""
 
-    fake_table = _make_fake_ncm_table()
-    fake_db = _make_fake_db([])  # always empty
-
     _ws_module.web_search = AsyncMock(return_value={"results": []})
 
+    fake_select = MagicMock()
+    fake_stmt = MagicMock()
+    fake_select.return_value = fake_stmt
+    fake_stmt.where.return_value = fake_stmt
+    fake_stmt.limit.return_value = fake_stmt
+
+    fake_db = _make_fake_db([])  # always empty
+
     async def _run():
-        with patch(
-            "src.application.agent.skills.classify_ncm.Base"
-        ) as mock_base:
+        with (
+            patch("src.application.agent.skills.classify_ncm.Base") as mock_base,
+            patch("src.application.agent.skills.classify_ncm.select", fake_select),
+            patch("src.application.agent.skills.classify_ncm.or_", MagicMock()),
+        ):
+            fake_table = MagicMock()
             mock_base.metadata.tables.get.return_value = fake_table
 
             from src.application.agent.skills.classify_ncm import classify_ncm
