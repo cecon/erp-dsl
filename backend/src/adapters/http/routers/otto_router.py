@@ -1,6 +1,7 @@
 """Otto HTTP router — universal chat streaming endpoint.
 
 POST /otto/stream → SSE streaming (emits conversational events)
+POST /otto/respond/{session_id} → receive interactive response and resume stream
 GET  /otto/components → list of available UI components and skills
 """
 
@@ -18,6 +19,11 @@ from sqlalchemy.orm import Session
 from src.adapters.http.dependency_injection import get_db, auth_adapter
 from src.application.agent.llm_provider import GeminiProvider
 from src.application.otto.orchestrator import run_otto_stream
+from src.application.otto.sessions import (
+    create_session,
+    get_session,
+    remove_session,
+)
 from src.infrastructure.persistence.sqlalchemy.agent_models import LLMProviderModel
 from src.infrastructure.persistence.sqlalchemy.models import PageVersionModel
 
@@ -125,18 +131,25 @@ async def otto_stream(
     # Convert history to list of dicts for the orchestrator
     history = [{"role": m.role, "content": m.content} for m in body.history]
 
+    # Create a session for interactive message support
+    session = create_session()
+
     async def event_generator():
-        async for event in run_otto_stream(
-            user_input=body.input,
-            tenant_id=tenant_id,
-            llm=llm,
-            page_key=body.page_key,
-            page_schema=page_schema,
-            context={"db": db, "tenant_id": tenant_id},
-            history=history,
-        ):
-            payload = json.dumps(event, ensure_ascii=False, default=str)
-            yield f"data: {payload}\n\n"
+        try:
+            async for event in run_otto_stream(
+                user_input=body.input,
+                tenant_id=tenant_id,
+                llm=llm,
+                page_key=body.page_key,
+                page_schema=page_schema,
+                context={"db": db, "tenant_id": tenant_id},
+                history=history,
+                session=session,
+            ):
+                payload = json.dumps(event, ensure_ascii=False, default=str)
+                yield f"data: {payload}\n\n"
+        finally:
+            remove_session(session.id)
 
     return StreamingResponse(
         event_generator(),
@@ -147,6 +160,31 @@ async def otto_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ── Interactive response endpoint ────────────────────────────────────
+
+
+class InteractiveResponse(BaseModel):
+    """Body for the interactive response endpoint."""
+    value: str = Field(..., description="User's selected value")
+
+
+@router.post("/respond/{session_id}")
+async def respond_interactive(
+    session_id: str,
+    body: InteractiveResponse,
+) -> dict:
+    """Receive the user's interactive response and resume the paused stream."""
+    session = get_session(session_id)
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found or expired",
+        )
+    session.response = body.value
+    session.event.set()
+    return {"ok": True}
 
 
 # ── Components list endpoint ─────────────────────────────────────────

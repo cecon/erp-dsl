@@ -1101,3 +1101,99 @@ body {
 .otto-input {
   width: 100%;
 }
+
+/* ── Interactive Message ─────────────────────────────────────────── */
+.otto-msg--interactive {
+  align-self: flex-start;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 14px 16px;
+  max-width: 95%;
+  width: 95%;
+  animation: fadeIn 0.25s ease-out;
+}
+
+[data-mantine-color-scheme='light'] .otto-msg--interactive {
+  background: #f0f4ff;
+}
+
+/* ── Confirm ─────────────────────────────────────────────────────── */
+.otto-interactive-confirm {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Choice ──────────────────────────────────────────────────────── */
+.otto-interactive-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Image Picker ────────────────────────────────────────────────── */
+.otto-interactive-images {
+  display: flex;
+  flex-direction: column;
+}
+
+.otto-interactive-image-card {
+  border: 2px solid var(--border-default);
+  transition: all 0.15s ease;
+}
+
+.otto-interactive-image-card:hover:not(.otto-interactive-dim) {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.otto-interactive-image--selected {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+/* ── Carousel ────────────────────────────────────────────────────── */
+.otto-interactive-carousel {
+  display: flex;
+  flex-direction: column;
+}
+
+.otto-interactive-carousel-track {
+  display: flex;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.otto-interactive-carousel-card {
+  min-width: 180px;
+  max-width: 220px;
+  flex-shrink: 0;
+  border: 2px solid var(--border-default);
+  transition: all 0.15s ease;
+}
+
+.otto-interactive-carousel-card:hover:not(.otto-interactive-dim) {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.otto-interactive-carousel--selected {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+/* ── Answered / Dimmed state ─────────────────────────────────────── */
+.otto-interactive--answered {
+  pointer-events: none;
+}
+
+.otto-interactive-dim {
+  opacity: 0.4;
+  filter: grayscale(0.3);
+  pointer-events: none;
+}
+

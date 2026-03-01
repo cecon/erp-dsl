@@ -12,35 +12,71 @@ No external agent frameworks — pure Python.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import re
 from typing import AsyncGenerator
 
 from src.application.agent import skill_registry
 from src.application.agent.llm_provider import LLMProvider
 from src.application.otto.prompts.otto_system import build_otto_system_prompt
+from src.application.otto.sessions import OttoSession, get_session
 from src.application.workflows.executor import execute_workflow
 from src.infrastructure.persistence.sqlalchemy.workflow_repository_impl import (
     SqlAlchemyWorkflowRepository,
 )
+
+# Timeout (seconds) waiting for user interactive response
+INTERACTIVE_TIMEOUT = 60.0
 
 logger = logging.getLogger(__name__)
 
 MAX_ITERATIONS = 10
 
 
-def _parse_llm_response(raw_response: str) -> dict | None:
-    """Parse LLM response, stripping markdown fences if present."""
-    clean = raw_response.strip()
+def _extract_json(text: str) -> dict:
+    """Robustly extract a JSON object from an LLM response.
+
+    Strategy:
+      1. Try ``json.loads`` on the raw text (after stripping markdown fences).
+      2. If that fails, use a regex to find the first ``{...}`` block and parse it.
+      3. If still no valid JSON, wrap the raw text as a plain message fallback.
+
+    This ensures the orchestrator *never* breaks due to the LLM mixing
+    explanatory prose with its JSON payload.
+    """
+    # Step 0 — strip markdown code fences
+    clean = text.strip()
     if clean.startswith("```"):
         clean = clean.split("\n", 1)[-1]
     if clean.endswith("```"):
         clean = clean.rsplit("```", 1)[0]
     clean = clean.strip()
+
+    # Step 1 — direct parse
     try:
         return json.loads(clean)
     except json.JSONDecodeError:
-        return None
+        pass
+
+    # Step 2 — regex: extract first top-level {...} block
+    match = re.search(r"\{.*\}", clean, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            logger.warning(
+                "Otto: regex-extracted block is not valid JSON: %s",
+                match.group()[:200],
+            )
+
+    # Step 3 — fallback: treat entire text as a plain assistant message
+    logger.warning(
+        "Otto: could not extract JSON, falling back to text message: %s",
+        text[:200],
+    )
+    return {"message": text.strip()}
 
 
 async def _try_workflow_command(
@@ -87,6 +123,7 @@ async def run_otto_stream(
     page_schema: dict | None = None,
     context: dict | None = None,
     history: list[dict] | None = None,
+    session: OttoSession | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Run the Otto ReAct loop as an async generator for SSE streaming.
 
@@ -144,17 +181,59 @@ async def run_otto_stream(
             }
             return
 
-        # ── Parse JSON ──────────────────────────────────────────
-        parsed = _parse_llm_response(raw_response)
-        if parsed is None:
-            logger.warning(
-                "Otto: Invalid JSON at iteration %d: %s",
-                iteration, raw_response[:200],
-            )
+        # ── Parse JSON (robust — never fails) ────────────────────
+        parsed = _extract_json(raw_response)
+
+        # ── Handle interactive request ────────────────────────────
+        if parsed.get("interactive") and session is not None:
+            idata = parsed["interactive"]
+            itype = idata.get("type", "confirm")
+
+            event_payload: dict = {
+                "role": "interactive",
+                "type": itype,
+                "session_id": session.id,
+                "question": idata.get("question", ""),
+                "done": False,
+            }
+            # Copy type-specific fields
+            if itype == "confirm":
+                event_payload["confirm_label"] = idata.get("confirm_label", "Confirmar")
+                event_payload["cancel_label"] = idata.get("cancel_label", "Cancelar")
+            elif itype == "choice":
+                event_payload["options"] = idata.get("options", [])
+            elif itype == "image-picker":
+                event_payload["images"] = idata.get("images", [])
+            elif itype == "carousel":
+                event_payload["items"] = idata.get("items", [])
+
+            yield event_payload
+
+            # Pause — wait for the frontend to POST /otto/respond/{session_id}
+            session.event.clear()
+            try:
+                await asyncio.wait_for(
+                    session.event.wait(), timeout=INTERACTIVE_TIMEOUT
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Otto interactive timeout for session %s", session.id
+                )
+                yield {
+                    "role": "system",
+                    "content": "Tempo esgotado. Reinicie a conversa.",
+                    "done": True,
+                }
+                return
+
+            user_choice = session.response or ""
+            session.response = None  # reset for potential next interactive
+
+            # Feed user choice back into LLM conversation
             messages.append({"role": "model", "content": raw_response})
             messages.append({
                 "role": "user",
-                "content": "Your response was not valid JSON. Please respond with ONLY valid JSON.",
+                "content": f"[USER_CHOICE] {user_choice}",
             })
             continue
 

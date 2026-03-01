@@ -10,7 +10,7 @@ import { OttoMessage } from './OttoMessage';
 import { useOttoContext } from './OttoProvider';
 
 export function OttoPanel() {
-  const { close, context, messages, status, send, reset, submitForm } = useOttoContext();
+  const { close, context, messages, status, send, reset, submitForm, respondInteractive } = useOttoContext();
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +86,12 @@ export function OttoPanel() {
           </div>
         ) : (
           messages.map((msg) => (
-            <OttoMessage key={msg.id} message={msg} onFormSubmit={submitForm} />
+            <OttoMessage
+              key={msg.id}
+              message={msg}
+              onFormSubmit={submitForm}
+              onInteractiveRespond={respondInteractive}
+            />
           ))
         )}
         {status === 'streaming' && messages[messages.length - 1]?.role !== 'assistant' && (

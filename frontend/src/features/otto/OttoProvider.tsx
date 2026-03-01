@@ -1,5 +1,8 @@
 /**
  * OttoProvider — global context provider for the Otto chat.
+ *
+ * Exposes all UseOttoReturn methods (including respondInteractive)
+ * plus panel open/close state and page context.
  */
 
 import {

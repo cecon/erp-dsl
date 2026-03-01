@@ -5,11 +5,14 @@
  * POST requests with conversation history in the body.
  * Accumulates all session messages and sends the full history
  * on each new request for multi-turn context continuity.
+ *
+ * Supports interactive messages: the backend pauses the SSE stream
+ * until the user responds via POST /otto/respond/{session_id}.
  */
 
 import { useCallback, useRef, useState } from 'react';
 import { useAuthStore } from '../../state/authStore';
-import type { OttoFormField, OttoMessage, OttoStatus } from './types';
+import type { InteractivePayload, OttoFormField, OttoMessage, OttoStatus } from './types';
 
 let _msgId = 0;
 function nextId(): string {
@@ -23,11 +26,12 @@ export interface UseOttoReturn {
   send: (message: string, pageKey?: string | null) => void;
   reset: () => void;
   submitForm: (messageId: string, values: Record<string, unknown>) => void;
+  respondInteractive: (messageId: string, value: string) => void;
 }
 
 /**
  * Build the conversation history from accumulated messages.
- * Only includes user and assistant messages (not tool, system, form).
+ * Only includes user and assistant messages (not tool, system, form, interactive).
  */
 function buildHistory(messages: OttoMessage[]): Array<{ role: string; content: string }> {
   return messages
@@ -134,6 +138,32 @@ export function useOtto(): UseOttoReturn {
         for (const part of parts) {
           const events = parseSSELines(part);
           for (const data of events) {
+            // ── Interactive ──────────────────────────────────
+            if (data.role === 'interactive') {
+              const payload: InteractivePayload = {
+                type: data.type as InteractivePayload['type'],
+                sessionId: data.session_id as string,
+                question: (data.question as string) || '',
+                confirmLabel: data.confirm_label as string | undefined,
+                cancelLabel: data.cancel_label as string | undefined,
+                options: data.options as InteractivePayload['options'],
+                images: data.images as InteractivePayload['images'],
+                items: data.items as InteractivePayload['items'],
+              };
+              const interactiveMsg: OttoMessage = {
+                id: nextId(),
+                role: 'interactive',
+                content: payload.question,
+                timestamp: Date.now(),
+                interactive: payload,
+              };
+              setMessages((prev) => [...prev, interactiveMsg]);
+              // Stream is paused on the backend — keep status as 'streaming'
+              // so the user sees the typing indicator until the interactive
+              // is answered and the stream resumes.
+              continue;
+            }
+
             // ── Form ────────────────────────────────────────
             if (data.role === 'form') {
               const formMsg: OttoMessage = {
@@ -193,8 +223,8 @@ export function useOtto(): UseOttoReturn {
               setMessages((prev) => [...prev, sysMsg]);
               if (data.done) {
                 const ec = (data.content as string) || '';
-                setStatus(ec.includes('Erro') ? 'error' : 'done');
-                setError(ec.includes('Erro') ? ec : null);
+                setStatus(ec.includes('Erro') || ec.includes('Tempo esgotado') ? 'error' : 'done');
+                setError(ec.includes('Erro') || ec.includes('Tempo esgotado') ? ec : null);
                 return;
               }
               continue;
@@ -310,5 +340,35 @@ export function useOtto(): UseOttoReturn {
     });
   }, [streamRequest]);
 
-  return { status, messages, error, send, reset, submitForm };
+  /**
+   * Respond to an interactive message.
+   * Marks the message as answered and sends the value to the backend
+   * via POST /otto/respond/{session_id} — the SSE stream resumes from there.
+   */
+  const respondInteractive = useCallback((messageId: string, value: string) => {
+    setMessages((prev) => {
+      const msg = prev.find((m) => m.id === messageId);
+      if (!msg?.interactive || msg.interactiveAnswered) return prev;
+
+      const sessionId = msg.interactive.sessionId;
+
+      // POST the response to resume the stream
+      const token = useAuthStore.getState().token;
+      fetch(`/api/otto/respond/${sessionId}?token=${encodeURIComponent(token || '')}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value }),
+      }).catch((err) => {
+        console.error('[Otto] Failed to respond interactive:', err);
+      });
+
+      return prev.map((m) =>
+        m.id === messageId
+          ? { ...m, interactiveAnswered: true, interactiveAnswer: value }
+          : m
+      );
+    });
+  }, []);
+
+  return { status, messages, error, send, reset, submitForm, respondInteractive };
 }
