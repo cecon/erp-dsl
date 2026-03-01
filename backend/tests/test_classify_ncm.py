@@ -1,13 +1,32 @@
 """Tests for classify_ncm skill — three-strategy pipeline.
 
 Tests use lightweight mocks to avoid hitting the real database or web.
-Uses asyncio.run() instead of pytest-asyncio to avoid extra dependencies.
+The web_search module is stubbed in sys.modules before importing classify_ncm
+to avoid the bs4 dependency.
 """
 
 from __future__ import annotations
 
 import asyncio
+import sys
+import types
 from unittest.mock import AsyncMock, MagicMock, patch
+
+
+# ---------------------------------------------------------------------------
+# Stub the web_search module before importing classify_ncm
+# ---------------------------------------------------------------------------
+
+_ws_module = types.ModuleType("src.application.agent.skills.web_search")
+_ws_mock = AsyncMock(return_value={"results": []})
+_ws_module.web_search = _ws_mock  # type: ignore[attr-defined]
+sys.modules["src.application.agent.skills.web_search"] = _ws_module
+
+# Also stub bs4 so the import chain doesn't break
+if "bs4" not in sys.modules:
+    _bs4_stub = types.ModuleType("bs4")
+    _bs4_stub.BeautifulSoup = MagicMock()  # type: ignore[attr-defined]
+    sys.modules["bs4"] = _bs4_stub
 
 
 # ---------------------------------------------------------------------------
@@ -82,18 +101,13 @@ def test_web_strategy_finds_ncm():
         ]
     }
 
-    mock_ws = AsyncMock(return_value=web_result)
+    # Configure the stubbed web_search to return our test data
+    _ws_module.web_search = AsyncMock(return_value=web_result)
 
     async def _run():
-        with (
-            patch(
-                "src.application.agent.skills.classify_ncm.Base"
-            ) as mock_base,
-            patch(
-                "src.application.agent.skills.web_search.web_search",
-                mock_ws,
-            ),
-        ):
+        with patch(
+            "src.application.agent.skills.classify_ncm.Base"
+        ) as mock_base:
             mock_base.metadata.tables.get.return_value = fake_table
 
             from src.application.agent.skills.classify_ncm import classify_ncm
@@ -110,7 +124,7 @@ def test_web_strategy_finds_ncm():
 
 
 def test_local_strategy_when_web_fails():
-    """Strategy 2 (local) should kick in when web returns nothing."""
+    """Strategy 2 (local) should kick in when web returns nothing useful."""
 
     fake_table = _make_fake_ncm_table()
     fake_db = MagicMock()
@@ -123,31 +137,23 @@ def test_local_strategy_when_web_fails():
 
     def _side_effect(*_a, **_kw):
         call_count["n"] += 1
-        # Web validation queries return empty; local queries return results
-        if call_count["n"] <= 2:
+        if call_count["n"] <= 2:  # web queries return empty
             return no_rows_mock
         return yes_rows_mock
 
     fake_db.execute.side_effect = _side_effect
 
-    web_result_with_no_ncm = {
+    # Web returns results but with NO 8-digit NCM codes in the text
+    _ws_module.web_search = AsyncMock(return_value={
         "results": [
             {"title": "Algo", "url": "", "snippet": "nenhum código aqui"}
         ]
-    }
-
-    mock_ws = AsyncMock(return_value=web_result_with_no_ncm)
+    })
 
     async def _run():
-        with (
-            patch(
-                "src.application.agent.skills.classify_ncm.Base"
-            ) as mock_base,
-            patch(
-                "src.application.agent.skills.web_search.web_search",
-                mock_ws,
-            ),
-        ):
+        with patch(
+            "src.application.agent.skills.classify_ncm.Base"
+        ) as mock_base:
             mock_base.metadata.tables.get.return_value = fake_table
 
             from src.application.agent.skills.classify_ncm import classify_ncm
@@ -168,18 +174,12 @@ def test_fallback_needs_user_input():
     fake_table = _make_fake_ncm_table()
     fake_db = _make_fake_db([])  # always empty
 
-    mock_ws = AsyncMock(return_value={"results": []})
+    _ws_module.web_search = AsyncMock(return_value={"results": []})
 
     async def _run():
-        with (
-            patch(
-                "src.application.agent.skills.classify_ncm.Base"
-            ) as mock_base,
-            patch(
-                "src.application.agent.skills.web_search.web_search",
-                mock_ws,
-            ),
-        ):
+        with patch(
+            "src.application.agent.skills.classify_ncm.Base"
+        ) as mock_base:
             mock_base.metadata.tables.get.return_value = fake_table
 
             from src.application.agent.skills.classify_ncm import classify_ncm
@@ -199,8 +199,9 @@ def test_empty_description_returns_empty():
     """Empty description should return empty candidates without errors."""
 
     async def _run():
-        from src.application.agent.skills.classify_ncm import classify_ncm
-        return await classify_ncm({"descricao": ""}, {"db": MagicMock()})
+        with patch("src.application.agent.skills.classify_ncm.Base"):
+            from src.application.agent.skills.classify_ncm import classify_ncm
+            return await classify_ncm({"descricao": ""}, {"db": MagicMock()})
 
     result = asyncio.run(_run())
     assert result == {"candidates": []}
@@ -210,8 +211,9 @@ def test_no_db_returns_error():
     """Missing db in context should return an error."""
 
     async def _run():
-        from src.application.agent.skills.classify_ncm import classify_ncm
-        return await classify_ncm({"descricao": "coca cola"}, {})
+        with patch("src.application.agent.skills.classify_ncm.Base"):
+            from src.application.agent.skills.classify_ncm import classify_ncm
+            return await classify_ncm({"descricao": "coca cola"}, {})
 
     result = asyncio.run(_run())
     assert "error" in result
