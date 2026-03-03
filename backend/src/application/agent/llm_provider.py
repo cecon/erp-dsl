@@ -35,7 +35,7 @@ class GeminiProvider(LLMProvider):
     """
 
     _BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-    _TIMEOUT = 30  # seconds
+    _TIMEOUT = 60  # seconds
 
     def __init__(self, api_key: str, model: str = "gemini-2.5-flash") -> None:
         self.api_key = api_key
@@ -96,6 +96,14 @@ class GeminiProvider(LLMProvider):
                 json=body,
                 params={"key": self.api_key},
             )
+            if resp.status_code >= 400:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(
+                    "Gemini API error %s: %s",
+                    resp.status_code,
+                    resp.text[:500],
+                )
             resp.raise_for_status()
             data = resp.json()
 

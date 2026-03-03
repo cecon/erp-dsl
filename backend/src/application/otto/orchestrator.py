@@ -387,13 +387,16 @@ async def run_otto_stream(
                 "done": False,
             }
 
-        # Feed result back to LLM
+        # Feed result back to LLM (truncated to avoid oversized payloads)
+        result_str = json.dumps(skill_result, ensure_ascii=False, default=str)
+        if len(result_str) > 1000:
+            result_str = result_str[:1000] + "...(truncated)"
         messages.append({"role": "model", "content": raw_response})
         messages.append({
             "role": "user",
             "content": (
                 f"Skill '{action}' returned:\n"
-                f"```json\n{json.dumps(skill_result, ensure_ascii=False, default=str)}\n```\n"
+                f"```json\n{result_str}\n```\n"
                 "Based on this result, decide your next action or answer the user."
             ),
         })

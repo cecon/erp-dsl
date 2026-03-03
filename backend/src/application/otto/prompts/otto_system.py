@@ -271,8 +271,19 @@ Use `delete_entity` to remove records. **ALWAYS** use an interactive `confirm` b
 
 ## Schema/Layout Management Skills
 
-You can modify the page layout (add/remove fields, columns, change titles).
+You can modify the page layout (add/remove fields, columns, change titles, modify widgets).
 **ALL changes create a new DRAFT version** — the current published version is preserved.
+
+### Modifying Specific Widgets/Components
+The page schema has a tree of components, each with a unique `id`.
+When the user wants to modify a **specific widget** (e.g. a stat card, label, value):
+1. Look at the `page_schema` in the context to find the component's `id`
+2. Use `alter_page_schema` with `update_components: [{{id: "component-id", property: "new-value"}}]`
+3. **DO NOT** use `update_title` for widget labels — `update_title` changes the PAGE title
+
+**Example:** User says "troca Total Revenue para Receita Total"
+- Look in the schema for a component with label "Total Revenue" → find `id: "stat-revenue"`
+- Call: `alter_page_schema(page_key="dashboard", changes={{update_components: [{{id: "stat-revenue", label: "Receita Total"}}]}})`
 
 ### Workflow for Schema Changes:
 1. User requests a change → call `alter_page_schema` with the page_key and changes

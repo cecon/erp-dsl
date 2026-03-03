@@ -23,7 +23,7 @@ services:
       ERP_DATABASE_URL: postgresql://erpdsl:erpdsl@postgres:5432/erpdsl
       ERP_JWT_SECRET: super-secret-change-in-prod
       ERP_CORS_ORIGINS: '["http://localhost:5174"]'
-      GEMINI_API_KEY: AIzaSyBxIjJ8RNBnNCcoAH_l1bRNqRCYwfi5vzc
+
       PYTHONPATH: /app
     depends_on:
       postgres:

@@ -9,7 +9,7 @@ Run standalone:
 
 from __future__ import annotations
 
-import os
+
 import uuid
 from datetime import datetime, timezone
 
@@ -49,11 +49,11 @@ SAMPLE_NCMS = [
 
 
 def seed_agent_data() -> None:
-    """Idempotent seed: inserts LLM provider and NCMs if they don't exist."""
-    gemini_key = os.environ.get("GEMINI_API_KEY", "")
-    if not gemini_key:
-        print("WARNING: GEMINI_API_KEY not set, using empty string")
+    """Idempotent seed: inserts LLM provider and NCMs if they don't exist.
 
+    The LLM provider API key and model are managed via the UI/database.
+    This seed only creates the initial record if none exists.
+    """
     engine = create_engine(settings.database_url, pool_pre_ping=True)
     Base.metadata.create_all(bind=engine)
     Session = sessionmaker(bind=engine)
@@ -69,20 +69,15 @@ def seed_agent_data() -> None:
         ).scalar_one_or_none()
 
         if existing:
-            # Update the API key if it changed
-            if existing.api_key_encrypted != gemini_key and gemini_key:
-                existing.api_key_encrypted = gemini_key
-                existing.is_active = True
-                print(f"Updated LLM provider API key (id={existing.id})")
-            else:
-                print(f"LLM provider already exists (id={existing.id})")
+            # Do NOT overwrite — API key and model are managed via UI/database
+            print(f"LLM provider already exists (id={existing.id}), skipping")
         else:
             provider = LLMProviderModel(
                 id=str(uuid.uuid4()),
                 tenant_id=DEFAULT_TENANT_ID,
                 provider="google",
-                model="gemini-2.5-flash",
-                api_key_encrypted=gemini_key,
+                model="gemini-3-flash-preview",
+                api_key_encrypted="",  # Must be configured via UI
                 base_url=None,
                 params=None,
                 is_active=True,
@@ -91,7 +86,7 @@ def seed_agent_data() -> None:
                 version=1,
             )
             session.add(provider)
-            print(f"Created LLM provider: google/gemini-2.0-flash")
+            print("Created LLM provider (configure API key via Settings > LLM Providers)")
 
         # ── NCM entries ──────────────────────────────────────────
         for ncm_data in SAMPLE_NCMS:

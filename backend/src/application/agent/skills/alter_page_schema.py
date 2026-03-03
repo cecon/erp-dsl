@@ -20,6 +20,50 @@ from src.infrastructure.persistence.sqlalchemy.models import PageVersionModel
 logger = logging.getLogger(__name__)
 
 
+def _find_component_by_id(components: list, target_id: str) -> dict | None:
+    """Recursively find a component by its ID in a nested component tree."""
+    for comp in components:
+        if comp.get("id") == target_id:
+            return comp
+        # Search in nested components
+        nested = comp.get("components", [])
+        if nested:
+            found = _find_component_by_id(nested, target_id)
+            if found:
+                return found
+        # Search in items (for activity_feed, quick_actions, etc.)
+        items = comp.get("items", [])
+        if items:
+            found = _find_component_by_id(items, target_id)
+            if found:
+                return found
+    return None
+
+
+def _list_all_components(components: list, prefix: str = "") -> list[dict]:
+    """Flatten the component tree into a list with path info."""
+    result = []
+    for comp in components:
+        comp_id = comp.get("id", "?")
+        comp_type = comp.get("type", "?")
+        label = comp.get("label", comp.get("text", ""))
+        path = f"{prefix}/{comp_id}" if prefix else comp_id
+
+        result.append({
+            "id": comp_id,
+            "type": comp_type,
+            "label": label,
+            "path": path,
+        })
+
+        # Recurse into nested components
+        for child_key in ("components", "items"):
+            children = comp.get(child_key, [])
+            if children:
+                result.extend(_list_all_components(children, path))
+    return result
+
+
 def _apply_changes(schema: dict, changes: dict) -> tuple[dict, list[str]]:
     """Apply requested changes to a schema copy.
 
@@ -30,6 +74,7 @@ def _apply_changes(schema: dict, changes: dict) -> tuple[dict, list[str]]:
         remove_columns: [column_key, ...]
         update_title: str
         update_description: str
+        update_components: [{id, ...props_to_update}]
 
     Returns:
         (modified_schema, list_of_change_descriptions)
@@ -44,6 +89,32 @@ def _apply_changes(schema: dict, changes: dict) -> tuple[dict, list[str]]:
     if "update_description" in changes:
         schema["description"] = changes["update_description"]
         descriptions.append("Descrição atualizada")
+
+    # ── Update specific components by ID ─────────────────────────
+    if changes.get("update_components"):
+        all_components = schema.get("components", [])
+        for update in changes["update_components"]:
+            target_id = update.get("id")
+            if not target_id:
+                continue
+            comp = _find_component_by_id(all_components, target_id)
+            if comp is None:
+                descriptions.append(f"⚠️ Componente '{target_id}' não encontrado")
+                continue
+            # Apply all properties except 'id'
+            changed_props = []
+            for key, value in update.items():
+                if key == "id":
+                    continue
+                old_value = comp.get(key)
+                comp[key] = value
+                changed_props.append(f"{key}: '{old_value}' → '{value}'")
+            if changed_props:
+                label = comp.get("label", target_id)
+                descriptions.append(
+                    f"Componente '{label}' (id={target_id}) atualizado: "
+                    + ", ".join(changed_props)
+                )
 
     # ── Fields (inside form component) ───────────────────────────
     form_comp = None
@@ -196,23 +267,29 @@ skill_registry.register(
     name="alter_page_schema",
     fn=alter_page_schema,
     description=(
-        "Modify a page's layout/schema (add/remove fields, columns, change title). "
+        "Modify a page's layout/schema. Can change page title, description, "
+        "add/remove fields and columns, AND update individual component properties "
+        "using their ID (e.g. change a stat card's label or value). "
         "ALWAYS creates a new DRAFT version — never modifies the published version. "
         "After creating the draft, ask the user to confirm before publishing. "
-        "Params: page_key (str), changes (dict with add_fields, remove_fields, "
-        "add_columns, remove_columns, update_title, update_description)."
+        "IMPORTANT: When the user wants to modify a specific widget/component, "
+        "use update_components with the component ID from the schema. "
+        "Example: to change 'Total Revenue' label on stat-revenue card, use: "
+        "changes: {update_components: [{id: 'stat-revenue', label: 'Receita Total'}]}. "
+        "Params: page_key (str), changes (dict)."
     ),
     params_schema={
         "type": "object",
         "properties": {
             "page_key": {
                 "type": "string",
-                "description": "Page key to modify (e.g. 'products')",
+                "description": "Page key to modify (e.g. 'products', 'dashboard')",
             },
             "changes": {
                 "type": "object",
                 "description": (
-                    "Changes to apply: "
+                    "Changes to apply. Available keys: "
+                    "update_components: [{id, ...props}] — modify specific components by ID, "
                     "add_fields: [{id, type, label}], "
                     "remove_fields: [field_id], "
                     "add_columns: [{key, label}], "
@@ -225,3 +302,4 @@ skill_registry.register(
         "required": ["page_key", "changes"],
     },
 )
+
