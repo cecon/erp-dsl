@@ -12,8 +12,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useOtto, type UseOttoReturn } from './useOtto';
 import type { OttoContext } from './types';
+import { useOtto, type UseOttoReturn } from './useOtto';
 
 /* ── Context shape ───────────────────────────────────────────────── */
 
@@ -50,6 +50,8 @@ export function OttoProvider({ children }: OttoProviderProps) {
     pageKey: null,
     pageTitle: null,
     entityEndpoint: null,
+    pageSchema: null,
+    viewMode: null,
   });
 
   const chat = useOtto();

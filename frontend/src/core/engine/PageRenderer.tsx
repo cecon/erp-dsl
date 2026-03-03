@@ -2,11 +2,11 @@ import { Alert, Button, Group, Loader, Modal, Stack, Text } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../../services/api';
-import { DynamicForm } from './DynamicForm';
 import { DynamicMrtGrid } from '../../components/grid/DynamicMrtGrid';
-import { componentRegistry } from './ComponentRegistry';
 import { useOttoContext } from '../../features/otto';
+import api from '../../services/api';
+import { componentRegistry } from './ComponentRegistry';
+import { DynamicForm } from './DynamicForm';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface SchemaAction {
@@ -67,15 +67,42 @@ export function PageRenderer() {
   const dataSource = schema?.dataSource;
   const endpoint = dataSource?.endpoint ?? `/${pageKey}`;
 
-  /* ── Sync Claw context with current page ────────────────────── */
+  /* ── Sync Otto context with current page ─────────────────── */
   const { setContext: setOttoContext } = useOttoContext();
+
+  // Immediately update pageKey on navigation (even before schema loads)
   useEffect(() => {
     setOttoContext({
       pageKey: pageKey ?? null,
-      pageTitle: schema?.title ?? pageKey ?? null,
-      entityEndpoint: endpoint ?? null,
+      pageTitle: null,
+      entityEndpoint: null,
+      pageSchema: null,
+      viewMode: null,
     });
-  }, [pageKey, schema?.title, endpoint, setOttoContext]);
+  }, [pageKey, setOttoContext]);
+
+  // Enrich context once schema is loaded
+  useEffect(() => {
+    if (!schema) return;
+    const isFormLayout = schema.layout === 'form';
+    setOttoContext({
+      pageKey: pageKey ?? null,
+      pageTitle: schema.title ?? pageKey ?? null,
+      entityEndpoint: endpoint ?? null,
+      pageSchema: schema,
+      viewMode: isFormLayout ? 'form' : 'grid',
+    });
+  }, [pageKey, schema, endpoint, setOttoContext]);
+
+  // Listen for Otto schema refresh events (after publish/rollback)
+  useEffect(() => {
+    const handler = () => {
+      queryClient.invalidateQueries({ queryKey: ['page', pageKey] });
+      queryClient.invalidateQueries({ queryKey: [pageKey] });
+    };
+    window.addEventListener('otto:refresh-page', handler);
+    return () => window.removeEventListener('otto:refresh-page', handler);
+  }, [pageKey, queryClient]);
 
   /* ── Action labels from schema ──────────────────────────────── */
 

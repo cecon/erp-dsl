@@ -85,10 +85,14 @@ export interface OttoMessage {
   interactiveAnswer?: string;
 }
 
+export type ViewMode = 'grid' | 'form' | 'dashboard' | null;
+
 export interface OttoContext {
   pageKey: string | null;
   pageTitle: string | null;
   entityEndpoint: string | null;
+  pageSchema: object | null;
+  viewMode: ViewMode;
 }
 
 export type OttoStatus = 'idle' | 'streaming' | 'done' | 'error';

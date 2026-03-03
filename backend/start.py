@@ -29,7 +29,7 @@ def main() -> None:
             sys.executable, "-m", "uvicorn",
             "src.adapters.http.main:app",
             "--host", "0.0.0.0",
-            "--port", "8000",
+            "--port", "8013",
             "--reload",
         ],
         check=True,

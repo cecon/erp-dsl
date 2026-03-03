@@ -81,7 +81,7 @@ def seed_agent_data() -> None:
                 id=str(uuid.uuid4()),
                 tenant_id=DEFAULT_TENANT_ID,
                 provider="google",
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 api_key_encrypted=gemini_key,
                 base_url=None,
                 params=None,

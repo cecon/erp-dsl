@@ -13,6 +13,7 @@ from src.adapters.http.routers import (
     agent_router,
     auth_router,
     generic_crud_router,
+    llm_router,
     otto_router,
     pages_router,
     workflow_router,
@@ -68,6 +69,13 @@ def create_app() -> FastAPI:
         otto_router.router,
         prefix="/otto",
         tags=["Otto"],
+    )
+
+    # LLM utility endpoints (model listing)
+    app.include_router(
+        llm_router.router,
+        prefix="/llm",
+        tags=["LLM"],
     )
 
     # Workflows

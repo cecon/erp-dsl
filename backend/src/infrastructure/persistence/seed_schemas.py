@@ -443,6 +443,12 @@ SIDEBAR_SCHEMA: dict[str, Any] = {
             "label": "Settings",
             "items": [
                 {
+                    "id": "nav-llm-providers",
+                    "label": "Provedores LLM",
+                    "icon": "robot",
+                    "path": "/pages/llm_providers",
+                },
+                {
                     "id": "nav-versions",
                     "label": "Page Versions",
                     "icon": "history",

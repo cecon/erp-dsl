@@ -37,7 +37,7 @@ class GeminiProvider(LLMProvider):
     _BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
     _TIMEOUT = 30  # seconds
 
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash") -> None:
+    def __init__(self, api_key: str, model: str = "gemini-2.5-flash") -> None:
         self.api_key = api_key
         self.model = model
 
@@ -90,13 +90,12 @@ class GeminiProvider(LLMProvider):
                 "parts": [{"text": system_instruction}],
             }
 
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": self.api_key,
-        }
-
         async with httpx.AsyncClient(timeout=self._TIMEOUT) as client:
-            resp = await client.post(url, json=body, headers=headers)
+            resp = await client.post(
+                url,
+                json=body,
+                params={"key": self.api_key},
+            )
             resp.raise_for_status()
             data = resp.json()
 

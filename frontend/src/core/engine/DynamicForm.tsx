@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
 import { Alert, Button, Divider, Group, SimpleGrid, Stack, Tabs, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
+import { useEffect, useRef } from 'react';
 import { getComponent } from './ComponentRegistry';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -27,6 +27,8 @@ export interface SchemaField {
   readonly?: boolean;
   computed?: ComputedDef;
   dataSource?: string;
+  /** Maps form field ids to query param names for dataSource URLs */
+  dataSourceParams?: Record<string, string>;
 }
 
 interface DynamicFormProps {
@@ -220,6 +222,16 @@ export function DynamicForm({
       );
     }
 
+    // Build dynamic options props for selects with dataSource
+    const extraProps: Record<string, any> = {};
+    if (field.dataSource && field.dataSourceParams) {
+      extraProps.dataSource = field.dataSource;
+      extraProps.dataSourceParams = {};
+      for (const [formField, paramName] of Object.entries(field.dataSourceParams)) {
+        extraProps.dataSourceParams[paramName] = form.values[formField] || '';
+      }
+    }
+
     return (
       <Component
         key={field.id}
@@ -228,6 +240,7 @@ export function DynamicForm({
         options={field.options}
         readOnly={field.readonly}
         disabled={field.readonly}
+        {...extraProps}
         {...form.getInputProps(field.id)}
       />
     );

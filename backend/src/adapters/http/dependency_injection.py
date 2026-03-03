@@ -29,6 +29,12 @@ import src.application.agent.skills.fetch_by_ean  # noqa: F401  — auto-registe
 import src.application.agent.skills.web_search  # noqa: F401  — auto-register
 import src.application.agent.skills.classify_ncm  # noqa: F401  — auto-register
 import src.application.agent.skills.create_entity  # noqa: F401  — auto-register
+import src.application.agent.skills.list_entities  # noqa: F401  — auto-register
+import src.application.agent.skills.update_entity  # noqa: F401  — auto-register
+import src.application.agent.skills.delete_entity  # noqa: F401  — auto-register
+import src.application.agent.skills.alter_page_schema  # noqa: F401  — auto-register
+import src.application.agent.skills.publish_page_version  # noqa: F401  — auto-register
+import src.application.agent.skills.rollback_page_version  # noqa: F401  — auto-register
 from src.infrastructure.security.jwt_auth_adapter import JWTAuthAdapter
 
 # ── Database engine & session ────────────────────────────────────────

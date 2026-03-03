@@ -25,6 +25,10 @@ from src.infrastructure.persistence.seed_schemas_fiscal import (
     TAX_GROUPS_FORM_SCHEMA,
     THEME_CONFIG_SCHEMA,
 )
+from src.infrastructure.persistence.seed_schemas_llm import (
+    LLM_PROVIDERS_PAGE_SCHEMA,
+    LLM_PROVIDERS_FORM_SCHEMA,
+)
 from src.infrastructure.persistence.seed_schemas_workflows import (
     WORKFLOWS_PAGE_SCHEMA,
     WORKFLOWS_FORM_SCHEMA,
@@ -51,6 +55,8 @@ SEED_PAGES = [
     ("fiscal_rules_form", FISCAL_RULES_FORM_SCHEMA),
     ("workflows", WORKFLOWS_PAGE_SCHEMA),
     ("workflows_form", WORKFLOWS_FORM_SCHEMA),
+    ("llm_providers", LLM_PROVIDERS_PAGE_SCHEMA),
+    ("llm_providers_form", LLM_PROVIDERS_FORM_SCHEMA),
     ("_sidebar", SIDEBAR_SCHEMA),
     ("_header", HEADER_SCHEMA),
     ("dashboard", DASHBOARD_SCHEMA),
@@ -59,7 +65,11 @@ SEED_PAGES = [
 
 
 def _seed_page(session: Session, page_key: str, schema: dict) -> None:
-    """Create or update a published page version."""
+    """Create a published page version ONLY if one doesn't already exist.
+
+    Never overwrites an existing published version — user/Otto changes
+    are preserved across restarts.
+    """
     stmt = select(PageVersionModel).where(
         PageVersionModel.page_key == page_key,
         PageVersionModel.scope == "global",
@@ -67,10 +77,7 @@ def _seed_page(session: Session, page_key: str, schema: dict) -> None:
     )
     existing = session.execute(stmt).scalar_one_or_none()
     if existing:
-        # Upsert: update schema_json if it changed
-        if existing.schema_json != schema:
-            existing.schema_json = schema
-            session.commit()
+        # Already has a published version — do NOT overwrite
         return
 
     page = PageVersionModel(
@@ -125,5 +132,9 @@ def seed_database(session: Session) -> None:
     ncm_count = seed_ncm(session)
     if ncm_count:
         print(f"  Seeded {ncm_count} NCM records")
+
+    # 5. Seed agent data (LLM provider for Otto)
+    from src.infrastructure.persistence.seed_agent import seed_agent_data
+    seed_agent_data()
 
     session.commit()

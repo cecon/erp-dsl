@@ -212,6 +212,16 @@ export function useOtto(): UseOttoReturn {
               continue;
             }
 
+            // ── Refresh (schema changed) ─────────────────────
+            if (data.role === 'refresh') {
+              window.dispatchEvent(
+                new CustomEvent('otto:refresh-page', {
+                  detail: { pageKey: data.page_key },
+                })
+              );
+              continue;
+            }
+
             // ── System ──────────────────────────────────────
             if (data.role === 'system') {
               const sysMsg: OttoMessage = {

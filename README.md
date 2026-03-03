@@ -9,8 +9,8 @@ docker-compose up --build
 ```
 
 - **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
+- **Backend API**: http://localhost:8013
+- **API Docs**: http://localhost:8013/docs
 
 Default credentials: `admin` / `admin`
 
@@ -37,6 +37,7 @@ frontend/
 ## Development (without Docker)
 
 ### Backend
+
 ```bash
 cd backend
 python -m venv venv && source venv/bin/activate
@@ -46,6 +47,7 @@ python start.py
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
 pnpm install

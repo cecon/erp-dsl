@@ -80,11 +80,51 @@ def build_otto_system_prompt(
     # ── Page context ────────────────────────────────────────────────
     context_section = ""
     if page_key:
-        context_section = f"\n## Current Page Context\n- Page key: `{page_key}`\n"
+        import json
+
+        title = page_key
+        description = ""
+        columns_info = ""
+        fields_info = ""
+        endpoint_info = ""
+
         if page_schema:
-            import json
+            title = page_schema.get("title", page_key)
+            description = page_schema.get("description", "")
+
+            # Extract column names for awareness
+            cols = page_schema.get("columns", [])
+            if cols:
+                col_names = [c.get("label", c.get("key", "?")) for c in cols]
+                columns_info = f"\n- Colunas visíveis na grid: {', '.join(col_names)}"
+
+            # Extract form field names
+            for comp in page_schema.get("components", []):
+                if comp.get("type") == "form":
+                    flds = comp.get("components", [])
+                    field_names = [f.get("label", f.get("id", "?")) for f in flds]
+                    fields_info = f"\n- Campos do formulário: {', '.join(field_names)}"
+                    break
+
+            ds = page_schema.get("dataSource", {})
+            if ds.get("endpoint"):
+                endpoint_info = f"\n- Endpoint de dados: `{ds['endpoint']}`"
+
             schema_str = json.dumps(page_schema, ensure_ascii=False, indent=2)[:2000]
-            context_section += f"- Page schema:\n```json\n{schema_str}\n```\n"
+
+        context_section = f"""
+## 🖥️ JANELA ATUAL DO USUÁRIO
+**O usuário está na página "{title}"** (page_key: `{page_key}`).
+{f'Descrição: {description}' if description else ''}
+Quando o usuário perguntar "em que janela estamos?", "que página é essa?", ou similar, responda que ele está na página **{title}**.{columns_info}{fields_info}{endpoint_info}
+"""
+        if page_schema:
+            context_section += f"\n- Schema completo:\n```json\n{schema_str}\n```\n"
+    else:
+        context_section = """
+## 🖥️ JANELA ATUAL DO USUÁRIO
+O usuário NÃO está em nenhuma página de entidade no momento (pode estar no Dashboard ou numa tela sem page_key).
+"""
 
     components_list = ", ".join(f"`{c}`" for c in FRONTEND_COMPONENTS)
 
@@ -204,6 +244,47 @@ To **display** info → text message. To **collect** inputs → form. To render 
 ## Web Search Guidelines
 Use the `web_search` skill when you need information NOT in the local database.
 
+## Page Context Awareness
+You are ALWAYS aware of which page/screen the user is currently viewing.
+The `page_key` tells you the current entity (e.g. 'products', 'clients', 'dashboard').
+The `page_schema` gives you the full DSL schema including fields, columns, and data source.
+
+When the user asks about "this page", "this table", "these records", etc.,
+use the current page context. NEVER ask "which page?" if the context is clear.
+
+## Data Management Skills
+
+### Reading Data
+Use `list_entities` to see existing records. Always use the current `page_key` as entity_key
+when the user asks about data on the current page.
+Example: User asks "quantos produtos temos?" → call list_entities with entity_key from page context.
+
+### Creating Data
+Use `create_entity` to insert new records. Always confirm the data with the user before saving.
+
+### Updating Data
+Use `update_entity` to modify existing records. First use `list_entities` to find the record,
+then update with the correct ID.
+
+### Deleting Data
+Use `delete_entity` to remove records. **ALWAYS** use an interactive `confirm` before deleting.
+
+## Schema/Layout Management Skills
+
+You can modify the page layout (add/remove fields, columns, change titles).
+**ALL changes create a new DRAFT version** — the current published version is preserved.
+
+### Workflow for Schema Changes:
+1. User requests a change → call `alter_page_schema` with the page_key and changes
+2. Show the user what was changed (the skill returns change descriptions)
+3. Ask for confirmation using interactive `confirm`
+4. If confirmed → call `publish_page_version` with the version_id
+5. If rejected → the draft is simply discarded (no action needed)
+
+### Rollback
+If the user wants to undo a schema change, use `rollback_page_version`.
+This restores the most recently archived version.
+
 ## Guidelines
 - Be concise and helpful.
 - Speak in Portuguese (Brazil) by default.
@@ -212,4 +293,5 @@ Use the `web_search` skill when you need information NOT in the local database.
 - Use forms when you need structured data input from the user.
 - ALWAYS maintain context from the conversation history.
 - ALWAYS prefer interactive messages over plain text questions when you have a limited set of options.
+- When the user navigates to a different page, the page context updates automatically.
 """

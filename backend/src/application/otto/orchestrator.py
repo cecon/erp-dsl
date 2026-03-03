@@ -41,7 +41,9 @@ def _extract_json(text: str) -> dict:
     Strategy:
       1. Try ``json.loads`` on the raw text (after stripping markdown fences).
       2. If that fails, use a regex to find the first ``{...}`` block and parse it.
-      3. If still no valid JSON, wrap the raw text as a plain message fallback.
+      3. If still no valid JSON, try to extract the "message" field via regex
+         (handles unescaped quotes inside JSON strings).
+      4. If all else fails, wrap the raw text as a plain message fallback.
 
     This ensures the orchestrator *never* breaks due to the LLM mixing
     explanatory prose with its JSON payload.
@@ -71,12 +73,50 @@ def _extract_json(text: str) -> dict:
                 match.group()[:200],
             )
 
-    # Step 3 — fallback: treat entire text as a plain assistant message
+    # Step 3 — extract known fields via regex (handles unescaped quotes)
+    # Try to pull "message": "..." where the value runs to the end of the block
+    msg_match = re.search(
+        r'"message"\s*:\s*"(.*?)"\s*[,}]\s*$',
+        clean,
+        re.DOTALL,
+    )
+    if msg_match:
+        return {"message": msg_match.group(1)}
+
+    # Also try extracting action + params for skill calls
+    action_match = re.search(r'"action"\s*:\s*"(\w+)"', clean)
+    if action_match:
+        # Try to extract params too
+        params_match = re.search(r'"params"\s*:\s*(\{[^}]*\})', clean)
+        result: dict = {"action": action_match.group(1)}
+        if params_match:
+            try:
+                result["params"] = json.loads(params_match.group(1))
+            except json.JSONDecodeError:
+                result["params"] = {}
+        # Extract message if present
+        inner_msg = re.search(r'"message"\s*:\s*"([^"]*)"', clean)
+        if inner_msg:
+            result["message"] = inner_msg.group(1)
+        return result
+
+    # Step 4 — fallback: treat entire text as a plain assistant message
+    # Strip any JSON-looking wrapping so user doesn't see raw braces
+    fallback_text = clean
+    if fallback_text.startswith("{") and fallback_text.endswith("}"):
+        # Try to pull just the value after "message":
+        inner = re.search(r'"message"\s*:\s*"(.+)', fallback_text, re.DOTALL)
+        if inner:
+            val = inner.group(1)
+            # Remove trailing "} or "}
+            val = re.sub(r'"\s*\}\s*$', '', val)
+            fallback_text = val
+
     logger.warning(
         "Otto: could not extract JSON, falling back to text message: %s",
         text[:200],
     )
-    return {"message": text.strip()}
+    return {"message": fallback_text.strip()}
 
 
 async def _try_workflow_command(
@@ -337,6 +377,15 @@ async def run_otto_stream(
             "content": json.dumps(skill_result, ensure_ascii=False, default=str)[:500],
             "done": False,
         }
+
+        # Emit refresh event if the skill requests a page reload
+        if skill_result.get("refresh_page"):
+            yield {
+                "role": "refresh",
+                "targets": ["page"],
+                "page_key": skill_result.get("page_key", ""),
+                "done": False,
+            }
 
         # Feed result back to LLM
         messages.append({"role": "model", "content": raw_response})
