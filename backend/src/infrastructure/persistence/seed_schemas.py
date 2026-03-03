@@ -49,6 +49,7 @@ _PRODUCT_DS_FIELDS: list[dict[str, Any]] = [
     {"id": "cclass_trib_is", "dbType": "string", "required": False},
     {"id": "ad_rem_ibs", "dbType": "decimal", "required": False},
     {"id": "ad_rem_cbs", "dbType": "decimal", "required": False},
+    {"id": "custom_fields", "dbType": "string", "required": False},
 ]
 
 # ─── UF options (reused in ANP section) ──────────────────────────

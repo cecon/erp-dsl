@@ -31,10 +31,10 @@ def _resolve_schema(db: Any, entity_name: str) -> dict | None:
             PageVersionModel.page_key == entity_name,
             PageVersionModel.status == "published",
         )
-        .order_by(PageVersionModel.version.desc())
+        .order_by(PageVersionModel.version_number.desc())
         .first()
     )
-    return row.schema_data if row else None
+    return row.schema_json if row else None
 
 
 def _get_table_name(schema: dict, entity_name: str) -> str:
