@@ -9,6 +9,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum,
+    ForeignKey,
     Integer,
     Numeric,
     String,
@@ -102,6 +103,39 @@ class ProductModel(Base):
     cest_codigo = Column(String(7), nullable=True)
     cclass_codigo = Column(String(16), nullable=True)
     custom_fields = Column(JSON, nullable=True)
+
+    # ── Extended product fields ──────────────────────────────────
+    description = Column(Text, nullable=True)  # commercial description
+    custo = Column(Numeric(12, 2), nullable=True)
+    markup = Column(Numeric(8, 2), nullable=True)
+    margem = Column(Numeric(8, 2), nullable=True)
+    grupo = Column(String(64), nullable=True)
+    subgrupo = Column(String(64), nullable=True)
+    marca = Column(String(64), nullable=True)
+    tax_group_id = Column(
+        String(36),
+        ForeignKey("tax_groups.id"),
+        nullable=True,
+    )
+
+    # ── Product type ─────────────────────────────────────────────
+    tipo_produto = Column(
+        String(16), nullable=False, server_default="padrao",
+    )  # padrao | combustivel | medicamento | servico
+
+    # ── Fuel / ANP fields (all nullable) ─────────────────────────
+    ind_comb = Column(String(2), nullable=True)
+    cod_anp = Column(String(9), nullable=True)
+    desc_anp = Column(String(95), nullable=True)
+    uf_cons = Column(String(2), nullable=True)
+    codif = Column(String(21), nullable=True)
+    p_bio = Column(Numeric(6, 4), nullable=True)
+    q_temp = Column(Numeric(16, 4), nullable=True)
+    cst_is = Column(String(4), nullable=True)
+    cclass_trib_is = Column(String(16), nullable=True)
+    ad_rem_ibs = Column(Numeric(16, 4), nullable=True)
+    ad_rem_cbs = Column(Numeric(16, 4), nullable=True)
+
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

@@ -2,13 +2,23 @@
 
 export type OttoRole = 'user' | 'assistant' | 'tool' | 'system' | 'form' | 'component' | 'interactive';
 
-/** Schema field definition — matches DynamicForm's field shape. */
+/** Schema field definition — matches DynamicForm's SchemaField shape. */
 export interface OttoFormField {
   id: string;
   type: string;
   label?: string;
   placeholder?: string;
   options?: { value: string; label: string }[];
+  /** Section children — flattened in form state. */
+  components?: OttoFormField[];
+  /** Conditional visibility: {field, value}. */
+  condition?: { field: string; value: string };
+  /** Marks field as read-only (e.g. computed fields). */
+  readonly?: boolean;
+  /** Computed field definition (formula + deps). */
+  computed?: { formula: string; deps: string[] };
+  /** Remote data source for select options. */
+  dataSource?: string;
 }
 
 /* ── Interactive message sub-types ────────────────────────────────── */

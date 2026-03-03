@@ -28,6 +28,7 @@ import src.infrastructure.persistence.sqlalchemy.agent_models  # noqa: F401
 import src.application.agent.skills.fetch_by_ean  # noqa: F401  — auto-register
 import src.application.agent.skills.web_search  # noqa: F401  — auto-register
 import src.application.agent.skills.classify_ncm  # noqa: F401  — auto-register
+import src.application.agent.skills.create_entity  # noqa: F401  — auto-register
 from src.infrastructure.security.jwt_auth_adapter import JWTAuthAdapter
 
 # ── Database engine & session ────────────────────────────────────────

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from src.infrastructure.persistence.seed_schemas import (
     DASHBOARD_SCHEMA,
     HEADER_SCHEMA,
+    PRODUCTS_FORM_SCHEMA,
     PRODUCTS_PAGE_SCHEMA,
     SIDEBAR_SCHEMA,
 )
@@ -41,6 +42,7 @@ ADMIN_USER_ID = "00000000-0000-0000-0000-000000000002"
 
 SEED_PAGES = [
     ("products", PRODUCTS_PAGE_SCHEMA),
+    ("products_form", PRODUCTS_FORM_SCHEMA),
     ("tax_groups", TAX_GROUPS_PAGE_SCHEMA),
     ("tax_groups_form", TAX_GROUPS_FORM_SCHEMA),
     ("operation_natures", OPERATION_NATURES_PAGE_SCHEMA),

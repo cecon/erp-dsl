@@ -215,4 +215,38 @@ def seed_ncm(session: Session) -> int:
             new_count, source, len(existing_codes),
         )
 
+    # ── Mark fuel NCMs as sujeito_is=True ────────────────────────
+    _mark_fuel_ncms(session, ncm_table)
+
     return new_count
+
+
+# Fuel NCM codes that should have sujeito_is=True
+_FUEL_NCMS: dict[str, str] = {
+    "27101259": "Gasolina",
+    "27101921": "Diesel",
+    "22071000": "Etanol",
+    "27112100": "GNV",
+    "27101941": "Óleo combustível",
+    "27101911": "Querosene",
+}
+
+
+def _mark_fuel_ncms(session: Session, ncm_table) -> None:
+    """Update fuel NCM codes to have sujeito_is=True."""
+    from sqlalchemy import update
+
+    fuel_codes = list(_FUEL_NCMS.keys())
+    result = session.execute(
+        update(ncm_table)
+        .where(ncm_table.c.codigo.in_(fuel_codes))
+        .where(ncm_table.c.sujeito_is == False)  # noqa: E712
+        .values(sujeito_is=True)
+    )
+    if result.rowcount:
+        session.commit()
+        logger.info(
+            "Marked %d fuel NCM codes as sujeito_is=True",
+            result.rowcount,
+        )
+

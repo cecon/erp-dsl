@@ -52,6 +52,7 @@ async def classify_ncm(params: dict, context: dict) -> dict:
     stmt = select(
         ncm_table.c.codigo,
         ncm_table.c.descricao,
+        ncm_table.c.sujeito_is,
     )
     for term in terms:
         stmt = stmt.where(ncm_table.c.descricao.ilike(f"%{term}%"))
@@ -59,15 +60,22 @@ async def classify_ncm(params: dict, context: dict) -> dict:
 
     rows = db.execute(stmt).mappings().all()
 
-    return {
-        "candidates": [
-            {
-                "codigo": row["codigo"],
-                "descricao": row["descricao"],
-            }
-            for row in rows
-        ]
-    }
+    candidates = [
+        {
+            "codigo": row["codigo"],
+            "descricao": row["descricao"],
+            "sujeito_is": bool(row["sujeito_is"]),
+        }
+        for row in rows
+    ]
+
+    # If any candidate is a fuel NCM (sujeito_is=True), hint the agent
+    # to set tipo_produto='combustivel' in the product draft.
+    result: dict = {"candidates": candidates}
+    if any(c["sujeito_is"] for c in candidates):
+        result["tipo_produto"] = "combustivel"
+
+    return result
 
 
 # ── Auto-register ───────────────────────────────────────────────────

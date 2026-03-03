@@ -11,6 +11,66 @@ from typing import Any
 
 # ─── Products CRUD Page ──────────────────────────────────────────
 
+# ─── Shared field definitions for products ───────────────────────
+
+_PRODUCT_DS_FIELDS: list[dict[str, Any]] = [
+    {"id": "name", "dbType": "string", "required": True},
+    {"id": "price", "dbType": "decimal", "required": True},
+    {
+        "id": "sku",
+        "dbType": "string",
+        "required": False,
+        "transforms": [{"fn": "uppercase", "on": "request"}],
+    },
+    {"id": "ean", "dbType": "string", "required": False},
+    {"id": "tipo_produto", "dbType": "string", "required": False},
+    {"id": "description", "dbType": "string", "required": False},
+    {"id": "descricao_tecnica", "dbType": "string", "required": False},
+    {"id": "unidade", "dbType": "string", "required": False},
+    {"id": "foto_url", "dbType": "string", "required": False},
+    {"id": "custo", "dbType": "decimal", "required": False},
+    {"id": "markup", "dbType": "decimal", "required": False},
+    {"id": "margem", "dbType": "decimal", "required": False},
+    {"id": "grupo", "dbType": "string", "required": False},
+    {"id": "subgrupo", "dbType": "string", "required": False},
+    {"id": "marca", "dbType": "string", "required": False},
+    {"id": "tax_group_id", "dbType": "string", "required": False},
+    {"id": "ncm_codigo", "dbType": "string", "required": False},
+    {"id": "cest_codigo", "dbType": "string", "required": False},
+    {"id": "cclass_codigo", "dbType": "string", "required": False},
+    {"id": "ind_comb", "dbType": "string", "required": False},
+    {"id": "cod_anp", "dbType": "string", "required": False},
+    {"id": "desc_anp", "dbType": "string", "required": False},
+    {"id": "uf_cons", "dbType": "string", "required": False},
+    {"id": "codif", "dbType": "string", "required": False},
+    {"id": "p_bio", "dbType": "decimal", "required": False},
+    {"id": "q_temp", "dbType": "decimal", "required": False},
+    {"id": "cst_is", "dbType": "string", "required": False},
+    {"id": "cclass_trib_is", "dbType": "string", "required": False},
+    {"id": "ad_rem_ibs", "dbType": "decimal", "required": False},
+    {"id": "ad_rem_cbs", "dbType": "decimal", "required": False},
+]
+
+# ─── UF options (reused in ANP section) ──────────────────────────
+
+_UF_OPTIONS: list[dict[str, str]] = [
+    {"value": "", "label": "Selecione..."},
+    {"value": "AC", "label": "AC"}, {"value": "AL", "label": "AL"},
+    {"value": "AM", "label": "AM"}, {"value": "AP", "label": "AP"},
+    {"value": "BA", "label": "BA"}, {"value": "CE", "label": "CE"},
+    {"value": "DF", "label": "DF"}, {"value": "ES", "label": "ES"},
+    {"value": "GO", "label": "GO"}, {"value": "MA", "label": "MA"},
+    {"value": "MG", "label": "MG"}, {"value": "MS", "label": "MS"},
+    {"value": "MT", "label": "MT"}, {"value": "PA", "label": "PA"},
+    {"value": "PB", "label": "PB"}, {"value": "PE", "label": "PE"},
+    {"value": "PI", "label": "PI"}, {"value": "PR", "label": "PR"},
+    {"value": "RJ", "label": "RJ"}, {"value": "RN", "label": "RN"},
+    {"value": "RO", "label": "RO"}, {"value": "RR", "label": "RR"},
+    {"value": "RS", "label": "RS"}, {"value": "SC", "label": "SC"},
+    {"value": "SE", "label": "SE"}, {"value": "SP", "label": "SP"},
+    {"value": "TO", "label": "TO"},
+]
+
 PRODUCTS_PAGE_SCHEMA: dict[str, Any] = {
     "title": "Products",
     "description": "CRUD page for product management",
@@ -20,39 +80,192 @@ PRODUCTS_PAGE_SCHEMA: dict[str, Any] = {
         "tableName": "products",
         "method": "GET",
         "paginationParams": {"offset": "offset", "limit": "limit"},
-        "fields": [
-            {"id": "name", "dbType": "string", "required": True},
-            {"id": "price", "dbType": "decimal", "required": True},
-            {
-                "id": "sku",
-                "dbType": "string",
-                "required": False,
-                "transforms": [
-                    {"fn": "uppercase", "on": "request"},
-                ],
-            },
-        ],
+        "fields": _PRODUCT_DS_FIELDS,
+    },
+    "components": [],
+    "columns": [
+        {"id": "col-name", "key": "name", "label": "Nome"},
+        {"id": "col-sku", "key": "sku", "label": "SKU"},
+        {"id": "col-price", "key": "price", "label": "Preço"},
+        {"id": "col-grupo", "key": "grupo", "label": "Grupo"},
+        {"id": "col-marca", "key": "marca", "label": "Marca"},
+        {"id": "col-tipo", "key": "tipo_produto", "label": "Tipo"},
+    ],
+    "actions": [
+        {
+            "id": "action-create",
+            "type": "create",
+            "label": "Novo Produto",
+            "navigateTo": "/pages/products_form",
+        },
+        {
+            "id": "action-edit",
+            "type": "edit",
+            "label": "Editar",
+            "navigateTo": "/pages/products_form",
+        },
+        {"id": "action-delete", "type": "delete", "label": "Excluir"},
+    ],
+}
+
+# ─── Products Form Page ──────────────────────────────────────────
+
+PRODUCTS_FORM_SCHEMA: dict[str, Any] = {
+    "title": "Cadastro de Produto",
+    "description": "Crie ou edite os dados do produto",
+    "layout": "form",
+    "dataSource": {
+        "endpoint": "/entities/products",
+        "tableName": "products",
+        "method": "POST",
+        "fields": _PRODUCT_DS_FIELDS,
     },
     "components": [
         {
-            "id": "product-form",
+            "id": "product-form-main",
             "type": "form",
             "components": [
-                {"id": "name", "type": "text", "label": "Product Name"},
-                {"id": "price", "type": "money", "label": "Price"},
-                {"id": "sku", "type": "text", "label": "SKU"},
+                # ── Seção: Identificação ─────────────────────
+                {
+                    "id": "section-identificacao",
+                    "type": "section",
+                    "label": "Identificação",
+                    "components": [
+                        {"id": "name", "type": "text", "label": "Nome do Produto"},
+                        {"id": "sku", "type": "text", "label": "SKU"},
+                        {"id": "ean", "type": "text", "label": "EAN / Código de Barras"},
+                        {
+                            "id": "tipo_produto",
+                            "type": "select",
+                            "label": "Tipo de Produto",
+                            "options": [
+                                {"value": "padrao", "label": "Padrão"},
+                                {"value": "combustivel", "label": "Combustível"},
+                                {"value": "medicamento", "label": "Medicamento"},
+                                {"value": "servico", "label": "Serviço"},
+                            ],
+                        },
+                    ],
+                },
+                # ── Seção: Classificação ─────────────────────
+                {
+                    "id": "section-classificacao",
+                    "type": "section",
+                    "label": "Classificação",
+                    "components": [
+                        {"id": "grupo", "type": "text", "label": "Grupo"},
+                        {"id": "subgrupo", "type": "text", "label": "Subgrupo"},
+                        {"id": "marca", "type": "text", "label": "Marca"},
+                        {
+                            "id": "tax_group_id",
+                            "type": "select",
+                            "label": "Grupo Tributário",
+                            "dataSource": "/entities/tax_groups",
+                            "options": [],
+                        },
+                    ],
+                },
+                # ── Seção: Descrição ─────────────────────────
+                {
+                    "id": "section-descricao",
+                    "type": "section",
+                    "label": "Descrição",
+                    "components": [
+                        {"id": "description", "type": "textarea", "label": "Descrição Comercial"},
+                        {"id": "descricao_tecnica", "type": "textarea", "label": "Descrição Técnica"},
+                        {
+                            "id": "unidade",
+                            "type": "select",
+                            "label": "Unidade de Medida",
+                            "options": [
+                                {"value": "UN", "label": "UN — Unidade"},
+                                {"value": "KG", "label": "KG — Quilograma"},
+                                {"value": "LT", "label": "LT — Litro"},
+                                {"value": "MT", "label": "MT — Metro"},
+                                {"value": "CX", "label": "CX — Caixa"},
+                                {"value": "PC", "label": "PC — Peça"},
+                            ],
+                        },
+                        {"id": "foto_url", "type": "text", "label": "URL da Foto"},
+                    ],
+                },
+                # ── Seção: Preço ─────────────────────────────
+                {
+                    "id": "section-preco",
+                    "type": "section",
+                    "label": "Preço",
+                    "components": [
+                        {"id": "price", "type": "money", "label": "Preço de Venda"},
+                        {"id": "custo", "type": "money", "label": "Preço de Custo"},
+                        {
+                            "id": "markup",
+                            "type": "number",
+                            "label": "Markup %",
+                            "readonly": True,
+                            "computed": {
+                                "formula": "markup",
+                                "deps": ["price", "custo"],
+                            },
+                        },
+                        {
+                            "id": "margem",
+                            "type": "number",
+                            "label": "Margem %",
+                            "readonly": True,
+                            "computed": {
+                                "formula": "margem",
+                                "deps": ["price", "custo"],
+                            },
+                        },
+                    ],
+                },
+                # ── Seção: Fiscal ────────────────────────────
+                {
+                    "id": "section-fiscal",
+                    "type": "section",
+                    "label": "Fiscal",
+                    "components": [
+                        {"id": "ncm_codigo", "type": "text", "label": "NCM"},
+                        {"id": "cest_codigo", "type": "text", "label": "CEST"},
+                        {"id": "cclass_codigo", "type": "text", "label": "Classificação Tributária"},
+                    ],
+                },
+                # ── Seção: Dados ANP (condicional) ───────────
+                {
+                    "id": "section-anp",
+                    "type": "section",
+                    "label": "Dados ANP",
+                    "condition": {"field": "tipo_produto", "value": "combustivel"},
+                    "components": [
+                        {"id": "cod_anp", "type": "text", "label": "Código ANP"},
+                        {"id": "desc_anp", "type": "text", "label": "Descrição ANP"},
+                        {
+                            "id": "uf_cons",
+                            "type": "select",
+                            "label": "UF Consumo",
+                            "options": _UF_OPTIONS,
+                        },
+                        {"id": "codif", "type": "text", "label": "CODIF"},
+                        {"id": "p_bio", "type": "number", "label": "% Biodiesel (pBio)"},
+                        {"id": "ad_rem_ibs", "type": "number", "label": "Alíquota Ad Rem IBS"},
+                        {"id": "ad_rem_cbs", "type": "number", "label": "Alíquota Ad Rem CBS"},
+                    ],
+                },
+            ],
+            "actions": [
+                {
+                    "id": "submit-btn",
+                    "type": "submit",
+                    "label": "Salvar",
+                },
+                {
+                    "id": "cancel-btn",
+                    "type": "cancel",
+                    "label": "Cancelar",
+                    "navigateTo": "/pages/products",
+                },
             ],
         },
-    ],
-    "columns": [
-        {"id": "col-name", "key": "name", "label": "Name"},
-        {"id": "col-price", "key": "price", "label": "Price"},
-        {"id": "col-sku", "key": "sku", "label": "SKU"},
-    ],
-    "actions": [
-        {"id": "action-create", "type": "create", "label": "New Product"},
-        {"id": "action-edit", "type": "edit", "label": "Edit"},
-        {"id": "action-delete", "type": "delete", "label": "Delete"},
     ],
 }
 

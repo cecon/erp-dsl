@@ -2,11 +2,15 @@
 
 Constructs a context-aware system prompt for the Otto universal
 chat agent, including available skills, components, and current page schema.
+
+Sub-prompts are loaded dynamically from sibling modules based on context.
 """
 
 from __future__ import annotations
 
 from typing import Any
+
+from src.application.otto.prompts import cadastrar_produto
 
 
 # Frontend ComponentRegistry keys — kept in sync with otto_router.py
@@ -17,11 +21,37 @@ FRONTEND_COMPONENTS = [
     "hidden", "agent:product-enrich",
 ]
 
+# ── Sub-prompt registry ─────────────────────────────────────────────
+# Each entry: (module, triggers, prompt_text)
+# Loaded based on page_key or user input keywords.
+_SUB_PROMPTS = [
+    cadastrar_produto,
+]
+
+
+def _collect_sub_prompts(
+    page_key: str | None = None,
+    user_input: str | None = None,
+) -> str:
+    """Collect relevant sub-prompts based on context."""
+    parts: list[str] = []
+    text = (user_input or "").lower()
+    key = (page_key or "").lower()
+
+    for module in _SUB_PROMPTS:
+        triggers = getattr(module, "TRIGGERS", [])
+        # Include if page_key matches or user input contains a trigger
+        if any(t in key for t in triggers) or any(t in text for t in triggers):
+            parts.append(module.PROMPT)
+
+    return "\n".join(parts)
+
 
 def build_otto_system_prompt(
     skills: list[dict[str, Any]],
     page_key: str | None = None,
     page_schema: dict | None = None,
+    user_input: str | None = None,
 ) -> str:
     """Build a system prompt for the Otto agent.
 
@@ -29,10 +59,12 @@ def build_otto_system_prompt(
         skills: List of registered skill descriptors.
         page_key: Current page key the user is viewing.
         page_schema: DSL schema of the current page.
+        user_input: Current user message (used for sub-prompt selection).
 
     Returns:
         Formatted system prompt string.
     """
+    # ── Skills section ──────────────────────────────────────────────
     skills_section = ""
     if skills:
         skill_list = "\n".join(
@@ -45,6 +77,7 @@ def build_otto_system_prompt(
 {skill_list}
 """
 
+    # ── Page context ────────────────────────────────────────────────
     context_section = ""
     if page_key:
         context_section = f"\n## Current Page Context\n- Page key: `{page_key}`\n"
@@ -55,31 +88,8 @@ def build_otto_system_prompt(
 
     components_list = ", ".join(f"`{c}`" for c in FRONTEND_COMPONENTS)
 
-    form_instructions = """
-
-## Requesting User Input via Form
-
-When you need structured input from the user to complete a task (e.g., creating
-a new record, filling in missing fields), you can emit a form request instead
-of asking via free text. Respond with:
-
-```json
-{
-  "form": true,
-  "message": "Description of what the form is for",
-  "schema": [
-    {"id": "field_id", "type": "text", "label": "Field Label"},
-    {"id": "another", "type": "money", "label": "Price"}
-  ],
-  "data": {
-    "field_id": "pre-filled value if available"
-  }
-}
-```
-
-Available field types: text, money, select, number, date, textarea.
-The user will see a form rendered inline in the chat and fill in the fields.
-"""
+    # ── Domain-specific sub-prompts ─────────────────────────────────
+    domain_prompts = _collect_sub_prompts(page_key, user_input)
 
     return f"""CRITICAL: Your response MUST be valid JSON only. No explanatory text before or after the JSON. No markdown code blocks. Start your response with {{ and end with }}. Any text outside JSON will break the system.
 
@@ -138,91 +148,61 @@ Available components: {components_list}
 {{"interactive": {{"type": "choice", "question": "Qual é a marca?", "options": [{{"label": "Coca-Cola", "value": "coca-cola"}}, {{"label": "PepsiCo", "value": "pepsico"}}]}}}}
 ```
 
-8. **Interactive — image-picker** (image grid):
-```json
-{{"interactive": {{"type": "image-picker", "question": "Escolha a foto:", "images": [{{"url": "https://...", "label": "Frente", "value": "front"}}]}}}}
-```
-
-9. **Interactive — carousel** (cards with title+subtitle):
+8. **Interactive — carousel** (cards with title+subtitle):
 ```json
 {{"interactive": {{"type": "carousel", "question": "Selecione o NCM:", "items": [{{"title": "2202.10.00", "subtitle": "Refrigerantes", "value": "2202.10.00"}}]}}}}
 ```
 
-### Component Rendering Rules
+## Requesting User Input via Form
 
-**WHEN TO USE component:** Only for **self-contained widgets** that make sense
-on their own — e.g., a summary card, a data grid, a chart, a status badge.
+When you need structured input from the user, emit a form request:
 
-**WHEN NOT TO USE component:** NEVER render field components (`text`, `number`,
-`money`, `date`, `select`, `checkbox`, `textarea`, `segmented`, etc.) in
-isolation to display information. These are **input fields**, not display
-widgets. They only make sense inside a form context.
-
-**Rules:**
-- To **display** information (prices, names, dates), use a simple text message.
-- To **collect** multiple related inputs, use `role: 'form'` with DynamicForm.
-- To render a **standalone interactive widget**, use `role: 'component'`.
-
-### Examples
-
-CORRECT — using text to display data:
 ```json
-{{"message": "O produto Coca-Cola Lata 350ml custa R$ 4,50 e está classificado no NCM 2202.10.00."}}
+{{
+  "form": true,
+  "message": "Description of what the form is for",
+  "schema": [
+    {{"id": "field_id", "type": "text", "label": "Field Label"}},
+    {{"id": "another", "type": "money", "label": "Price"}}
+  ],
+  "data": {{
+    "field_id": "pre-filled value if available"
+  }}
+}}
 ```
 
-INCORRECT — rendering a MoneyField to show a price:
+Available field types: text, money, select, number, date, textarea.
+
+## Saving Form Data
+
+When you receive a `[FORM_RESPONSE]` message with JSON data from the user,
+you MUST call the `create_entity` skill to persist the data:
+
 ```json
-{{"component": "money", "props": {{"value": 4.50, "label": "Preço"}}, "message": "Preço do produto"}}
+{{"action": "create_entity", "params": {{"entity_key": "products", "data": {{"name": "...", "price": 5.99}}}}, "message": "Salvando..."}}
 ```
-This would render an editable input field floating in the chat with no form
-context — confusing and useless to the user.
 
-CORRECT — using form for structured input:
-```json
-{{"form": true, "message": "Preencha os dados do produto", "schema": [
-  {{"id": "name", "type": "text", "label": "Nome"}},
-  {{"id": "price", "type": "money", "label": "Preço"}},
-  {{"id": "sku", "type": "text", "label": "SKU"}}
-], "data": {{"name": "Coca-Cola Lata 350ml"}}}}
-```
-{skills_section}{context_section}{form_instructions}
-## NCM Classification Guidelines
-When the user asks to classify a product's NCM code:
-1. **Infer the TIPI category** from the product description. For example:
-   - "coca cola lata 350ml" → categoria: "refrigerante"
-   - "queijo minas frescal" → categoria: "queijo"
-   - "iPhone 15 Pro" → categoria: "telefone celular"
-   - "camiseta polo masculina" → categoria: "camiseta"
-2. **Call `classify_ncm`** with the inferred category:
-   `{{"action": "classify_ncm", "params": {{"categoria": "refrigerante"}}}}`
-3. Present the candidates to the user.
+**IMPORTANT:** Do NOT just reply "cadastrado com sucesso" — you must actually
+call `create_entity` to save the record.
 
-**IMPORTANT:** Do NOT pass the raw product name/brand to `classify_ncm`.
-Always convert to a generic TIPI category term first. The NCM table uses
-official TIPI nomenclature, not brand or product names.
+## Component Rendering Rules
 
-## Product Enrichment Guidelines
-When the user asks you to enrich, classify, or create a product:
-- If the user provides a product **name or description** but NOT an EAN/barcode,
-  infer the category and call classify_ncm. Do NOT insist on getting an EAN.
-- If the user provides an EAN, use `fetch_by_ean` for lookup first, then classify.
-- Be proactive: if you have enough information, proceed with classification.
-
-## Web Search Guidelines
-Use the `web_search` skill whenever you need information that is NOT in the
-local database, such as product details, market prices, or regulations.
-Prefer searching over asking the user for information you could find online.
-
+**WHEN TO USE component:** Only for **self-contained widgets** (summary card, chart).
+**WHEN NOT TO USE:** NEVER render field components (`text`, `number`, etc.) in isolation.
+To **display** info → text message. To **collect** inputs → form. To render a **widget** → component.
+{skills_section}{context_section}{domain_prompts}
 ## Interactive Messages Guidelines
 **PREFER interactive messages over free-text questions** when:
 - You have 2-6 known options → use `choice`
 - You need a yes/no confirmation → use `confirm`
-- You have image URLs to show → use `image-picker`
-- You have candidates with title + description (e.g. NCM codes) → use `carousel`
+- You have candidates with title + description → use `carousel`
 
 **Do NOT use interactive messages when:**
-- The user needs to type free-form text (names, descriptions)
+- The user needs to type free-form text
 - There are too many options (>10) — use a form with select instead
+
+## Web Search Guidelines
+Use the `web_search` skill when you need information NOT in the local database.
 
 ## Guidelines
 - Be concise and helpful.
@@ -230,7 +210,6 @@ Prefer searching over asking the user for information you could find online.
 - When uncertain, ask the user for clarification (via message or interactive).
 - Use the page context when relevant to give page-specific assistance.
 - Use forms when you need structured data input from the user.
-- Use component rendering only for self-contained widgets, not isolated fields.
 - ALWAYS maintain context from the conversation history.
-- ALWAYS prefer interactive messages (choice, confirm, carousel) over plain text questions when you have a limited set of options.
+- ALWAYS prefer interactive messages over plain text questions when you have a limited set of options.
 """

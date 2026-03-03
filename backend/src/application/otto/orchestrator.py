@@ -151,6 +151,7 @@ async def run_otto_stream(
         skills=skills,
         page_key=page_key,
         page_schema=page_schema,
+        user_input=user_input,
     )
 
     # Build messages: system + history + current user input

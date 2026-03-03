@@ -55,6 +55,7 @@ The final draft MUST include these fields (use null for unknown values):
 - ncm_codigo: NCM code (8 digits) — NEVER invent this, only use values from classify_ncm
 - cest_codigo: CEST code (7 digits) — null if unknown
 - cclass_codigo: Tax classification code — null if unknown
+- tipo_produto: Product type — if classify_ncm returns tipo_produto='combustivel', use it; otherwise default to 'padrao'. Valid values: padrao, combustivel, medicamento, servico
 - price: Price — null if unknown
 - sku: SKU — null if unknown
 - custom_fields: Tenant-specific custom fields as a JSON object, or null

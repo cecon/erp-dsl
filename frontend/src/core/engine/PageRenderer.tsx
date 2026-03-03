@@ -194,15 +194,18 @@ export function PageRenderer() {
 
   /* ── Form fields from schema components ─────────────────────── */
 
+  /** Map a raw DSL field into the shape DynamicForm expects. */
+  const mapField = (f: any): any => ({
+    ...f,
+    ...(f.components
+      ? { components: f.components.map((child: any) => mapField(child)) }
+      : {}),
+  });
+
   const formFields =
     schema.components
       ?.find((c: any) => c.type === 'form')
-      ?.components?.map((f: any) => ({
-        id: f.id,
-        type: f.type,
-        label: f.label,
-        options: f.options,
-      })) ?? [];
+      ?.components?.map(mapField) ?? [];
 
   /* ── Modal title from schema actions ────────────────────────── */
 
