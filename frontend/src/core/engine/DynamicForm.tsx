@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Alert, Button, Divider, Group, Stack, Title } from '@mantine/core';
+import { Alert, Button, Divider, Group, SimpleGrid, Stack, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { getComponent } from './ComponentRegistry';
 
@@ -22,7 +22,8 @@ export interface SchemaField {
   placeholder?: string;
   options?: { value: string; label: string }[];
   condition?: FieldCondition;
-  components?: SchemaField[]; // for type === 'section'
+  components?: SchemaField[]; // for type === 'section' or 'grid'
+  columns?: number; // for type === 'grid' (1, 2 or 3)
   readonly?: boolean;
   computed?: ComputedDef;
   dataSource?: string;
@@ -46,8 +47,8 @@ function flattenFieldIds(
 ): Record<string, any> {
   const result: Record<string, any> = {};
   for (const field of fields) {
-    if (field.type === 'section' && field.components) {
-      // Recurse into section children — they are first-level form values
+    if ((field.type === 'section' || field.type === 'grid') && field.components) {
+      // Recurse into section/grid children — they are first-level form values
       Object.assign(result, flattenFieldIds(field.components, existing));
     } else {
       result[field.id] = existing[field.id] ?? '';
@@ -62,7 +63,7 @@ function flattenFieldIds(
 function collectComputed(fields: SchemaField[]): SchemaField[] {
   const result: SchemaField[] = [];
   for (const field of fields) {
-    if (field.type === 'section' && field.components) {
+    if ((field.type === 'section' || field.type === 'grid') && field.components) {
       result.push(...collectComputed(field.components));
     } else if (field.computed) {
       result.push(field);
@@ -160,6 +161,15 @@ export function DynamicForm({
             {field.components?.map((child) => renderField(child))}
           </Stack>
         </div>
+      );
+    }
+
+    // Grid: render children side by side in columns
+    if (field.type === 'grid') {
+      return (
+        <SimpleGrid key={field.id} cols={field.columns || 2} spacing="md">
+          {field.components?.map((child) => renderField(child))}
+        </SimpleGrid>
       );
     }
 

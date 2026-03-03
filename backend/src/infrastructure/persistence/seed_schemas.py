@@ -125,47 +125,158 @@ PRODUCTS_FORM_SCHEMA: dict[str, Any] = {
             "id": "product-form-main",
             "type": "form",
             "components": [
-                # ── Seção: Identificação ─────────────────────
+                # ── Seção: Identificação (grid 2 cols) ───────
                 {
                     "id": "section-identificacao",
                     "type": "section",
                     "label": "Identificação",
                     "components": [
-                        {"id": "name", "type": "text", "label": "Nome do Produto"},
-                        {"id": "sku", "type": "text", "label": "SKU"},
-                        {"id": "ean", "type": "text", "label": "EAN / Código de Barras"},
                         {
-                            "id": "tipo_produto",
-                            "type": "select",
-                            "label": "Tipo de Produto",
-                            "options": [
-                                {"value": "padrao", "label": "Padrão"},
-                                {"value": "combustivel", "label": "Combustível"},
-                                {"value": "medicamento", "label": "Medicamento"},
-                                {"value": "servico", "label": "Serviço"},
+                            "id": "grid-identificacao",
+                            "type": "grid",
+                            "columns": 2,
+                            "components": [
+                                {"id": "name", "type": "text", "label": "Nome do Produto"},
+                                {
+                                    "id": "tipo_produto",
+                                    "type": "select",
+                                    "label": "Tipo de Produto",
+                                    "options": [
+                                        {"value": "padrao", "label": "Padrão"},
+                                        {"value": "combustivel", "label": "Combustível"},
+                                        {"value": "medicamento", "label": "Medicamento"},
+                                        {"value": "servico", "label": "Serviço"},
+                                    ],
+                                },
+                                {"id": "sku", "type": "text", "label": "SKU"},
+                                {"id": "ean", "type": "text", "label": "EAN / Código de Barras"},
                             ],
                         },
                     ],
                 },
-                # ── Seção: Classificação ─────────────────────
+                # ── Seção: Classificação (grid 3 cols) ───────
                 {
                     "id": "section-classificacao",
                     "type": "section",
                     "label": "Classificação",
                     "components": [
-                        {"id": "grupo", "type": "text", "label": "Grupo"},
-                        {"id": "subgrupo", "type": "text", "label": "Subgrupo"},
-                        {"id": "marca", "type": "text", "label": "Marca"},
                         {
-                            "id": "tax_group_id",
-                            "type": "select",
-                            "label": "Grupo Tributário",
-                            "dataSource": "/entities/tax_groups",
-                            "options": [],
+                            "id": "grid-classificacao",
+                            "type": "grid",
+                            "columns": 3,
+                            "components": [
+                                {"id": "grupo", "type": "text", "label": "Grupo"},
+                                {"id": "subgrupo", "type": "text", "label": "Subgrupo"},
+                                {"id": "marca", "type": "text", "label": "Marca"},
+                                {
+                                    "id": "tax_group_id",
+                                    "type": "select",
+                                    "label": "Grupo Tributário",
+                                    "dataSource": "/entities/tax_groups",
+                                    "options": [],
+                                },
+                                {
+                                    "id": "unidade",
+                                    "type": "select",
+                                    "label": "Unidade de Medida",
+                                    "options": [
+                                        {"value": "UN", "label": "UN — Unidade"},
+                                        {"value": "KG", "label": "KG — Quilograma"},
+                                        {"value": "LT", "label": "LT — Litro"},
+                                        {"value": "MT", "label": "MT — Metro"},
+                                        {"value": "CX", "label": "CX — Caixa"},
+                                        {"value": "PC", "label": "PC — Peça"},
+                                    ],
+                                },
+                                {"id": "foto_url", "type": "text", "label": "URL da Foto"},
+                            ],
                         },
                     ],
                 },
-                # ── Seção: Descrição ─────────────────────────
+                # ── Seção: Preço (grid 2 cols) ───────────────
+                {
+                    "id": "section-preco",
+                    "type": "section",
+                    "label": "Preço",
+                    "components": [
+                        {
+                            "id": "grid-preco",
+                            "type": "grid",
+                            "columns": 2,
+                            "components": [
+                                {"id": "price", "type": "money", "label": "Preço de Venda"},
+                                {"id": "custo", "type": "money", "label": "Preço de Custo"},
+                                {
+                                    "id": "markup",
+                                    "type": "number",
+                                    "label": "Markup %",
+                                    "readonly": True,
+                                    "computed": {
+                                        "formula": "markup",
+                                        "deps": ["price", "custo"],
+                                    },
+                                },
+                                {
+                                    "id": "margem",
+                                    "type": "number",
+                                    "label": "Margem %",
+                                    "readonly": True,
+                                    "computed": {
+                                        "formula": "margem",
+                                        "deps": ["price", "custo"],
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                # ── Seção: Fiscal (grid 3 cols) ──────────────
+                {
+                    "id": "section-fiscal",
+                    "type": "section",
+                    "label": "Fiscal",
+                    "components": [
+                        {
+                            "id": "grid-fiscal",
+                            "type": "grid",
+                            "columns": 3,
+                            "components": [
+                                {"id": "ncm_codigo", "type": "text", "label": "NCM"},
+                                {"id": "cest_codigo", "type": "text", "label": "CEST"},
+                                {"id": "cclass_codigo", "type": "text", "label": "Classificação Tributária"},
+                            ],
+                        },
+                    ],
+                },
+                # ── Seção: Dados ANP (condicional, grid 2 cols)
+                {
+                    "id": "section-anp",
+                    "type": "section",
+                    "label": "Dados ANP",
+                    "condition": {"field": "tipo_produto", "value": "combustivel"},
+                    "components": [
+                        {
+                            "id": "grid-anp",
+                            "type": "grid",
+                            "columns": 2,
+                            "components": [
+                                {"id": "cod_anp", "type": "text", "label": "Código ANP"},
+                                {"id": "desc_anp", "type": "text", "label": "Descrição ANP"},
+                                {
+                                    "id": "uf_cons",
+                                    "type": "select",
+                                    "label": "UF Consumo",
+                                    "options": _UF_OPTIONS,
+                                },
+                                {"id": "codif", "type": "text", "label": "CODIF"},
+                                {"id": "p_bio", "type": "number", "label": "% Biodiesel (pBio)"},
+                                {"id": "ad_rem_ibs", "type": "number", "label": "Alíquota Ad Rem IBS"},
+                                {"id": "ad_rem_cbs", "type": "number", "label": "Alíquota Ad Rem CBS"},
+                            ],
+                        },
+                    ],
+                },
+                # ── Seção: Descrição (largura total, sem grid)
                 {
                     "id": "section-descricao",
                     "type": "section",
@@ -173,82 +284,6 @@ PRODUCTS_FORM_SCHEMA: dict[str, Any] = {
                     "components": [
                         {"id": "description", "type": "textarea", "label": "Descrição Comercial"},
                         {"id": "descricao_tecnica", "type": "textarea", "label": "Descrição Técnica"},
-                        {
-                            "id": "unidade",
-                            "type": "select",
-                            "label": "Unidade de Medida",
-                            "options": [
-                                {"value": "UN", "label": "UN — Unidade"},
-                                {"value": "KG", "label": "KG — Quilograma"},
-                                {"value": "LT", "label": "LT — Litro"},
-                                {"value": "MT", "label": "MT — Metro"},
-                                {"value": "CX", "label": "CX — Caixa"},
-                                {"value": "PC", "label": "PC — Peça"},
-                            ],
-                        },
-                        {"id": "foto_url", "type": "text", "label": "URL da Foto"},
-                    ],
-                },
-                # ── Seção: Preço ─────────────────────────────
-                {
-                    "id": "section-preco",
-                    "type": "section",
-                    "label": "Preço",
-                    "components": [
-                        {"id": "price", "type": "money", "label": "Preço de Venda"},
-                        {"id": "custo", "type": "money", "label": "Preço de Custo"},
-                        {
-                            "id": "markup",
-                            "type": "number",
-                            "label": "Markup %",
-                            "readonly": True,
-                            "computed": {
-                                "formula": "markup",
-                                "deps": ["price", "custo"],
-                            },
-                        },
-                        {
-                            "id": "margem",
-                            "type": "number",
-                            "label": "Margem %",
-                            "readonly": True,
-                            "computed": {
-                                "formula": "margem",
-                                "deps": ["price", "custo"],
-                            },
-                        },
-                    ],
-                },
-                # ── Seção: Fiscal ────────────────────────────
-                {
-                    "id": "section-fiscal",
-                    "type": "section",
-                    "label": "Fiscal",
-                    "components": [
-                        {"id": "ncm_codigo", "type": "text", "label": "NCM"},
-                        {"id": "cest_codigo", "type": "text", "label": "CEST"},
-                        {"id": "cclass_codigo", "type": "text", "label": "Classificação Tributária"},
-                    ],
-                },
-                # ── Seção: Dados ANP (condicional) ───────────
-                {
-                    "id": "section-anp",
-                    "type": "section",
-                    "label": "Dados ANP",
-                    "condition": {"field": "tipo_produto", "value": "combustivel"},
-                    "components": [
-                        {"id": "cod_anp", "type": "text", "label": "Código ANP"},
-                        {"id": "desc_anp", "type": "text", "label": "Descrição ANP"},
-                        {
-                            "id": "uf_cons",
-                            "type": "select",
-                            "label": "UF Consumo",
-                            "options": _UF_OPTIONS,
-                        },
-                        {"id": "codif", "type": "text", "label": "CODIF"},
-                        {"id": "p_bio", "type": "number", "label": "% Biodiesel (pBio)"},
-                        {"id": "ad_rem_ibs", "type": "number", "label": "Alíquota Ad Rem IBS"},
-                        {"id": "ad_rem_cbs", "type": "number", "label": "Alíquota Ad Rem CBS"},
                     ],
                 },
             ],
