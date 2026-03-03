@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Alert, Button, Divider, Group, SimpleGrid, Stack, Title } from '@mantine/core';
+import { Alert, Button, Divider, Group, SimpleGrid, Stack, Tabs, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { getComponent } from './ComponentRegistry';
 
@@ -22,7 +22,7 @@ export interface SchemaField {
   placeholder?: string;
   options?: { value: string; label: string }[];
   condition?: FieldCondition;
-  components?: SchemaField[]; // for type === 'section' or 'grid'
+  components?: SchemaField[]; // for type === 'section', 'grid', 'tabs' or 'tab'
   columns?: number; // for type === 'grid' (1, 2 or 3)
   readonly?: boolean;
   computed?: ComputedDef;
@@ -37,8 +37,11 @@ interface DynamicFormProps {
   submitLabel?: string;
 }
 
+/** Types that act as layout containers — they recurse into children. */
+const CONTAINER_TYPES = new Set(['section', 'grid', 'tabs', 'tab']);
+
 /**
- * Flatten all field IDs from a nested schema (including inside sections)
+ * Flatten all field IDs from a nested schema (including inside containers)
  * into a flat Record for use as form initialValues.
  */
 function flattenFieldIds(
@@ -47,8 +50,8 @@ function flattenFieldIds(
 ): Record<string, any> {
   const result: Record<string, any> = {};
   for (const field of fields) {
-    if ((field.type === 'section' || field.type === 'grid') && field.components) {
-      // Recurse into section/grid children — they are first-level form values
+    if (CONTAINER_TYPES.has(field.type) && field.components) {
+      // Recurse into container children — they are first-level form values
       Object.assign(result, flattenFieldIds(field.components, existing));
     } else {
       result[field.id] = existing[field.id] ?? '';
@@ -63,7 +66,7 @@ function flattenFieldIds(
 function collectComputed(fields: SchemaField[]): SchemaField[] {
   const result: SchemaField[] = [];
   for (const field of fields) {
-    if ((field.type === 'section' || field.type === 'grid') && field.components) {
+    if (CONTAINER_TYPES.has(field.type) && field.components) {
       result.push(...collectComputed(field.components));
     } else if (field.computed) {
       result.push(field);
@@ -96,11 +99,13 @@ function evalFormula(formula: string, values: Record<string, any>): string {
  * Supports:
  * - Flat fields (text, select, money, textarea, etc.)
  * - Sections (type: "section") with nested child components
+ * - Grids (type: "grid") with side-by-side column layout
+ * - Tabs (type: "tabs") with tabbed navigation panels
  * - Conditional visibility via `condition: { field, value }`
  * - Readonly computed fields (e.g. markup, margem)
  *
- * Section children are treated as first-level form values (flattened),
- * NOT nested under a section key.
+ * Container children are treated as first-level form values (flattened),
+ * NOT nested under a container key.
  */
 export function DynamicForm({
   fields,
@@ -170,6 +175,32 @@ export function DynamicForm({
         <SimpleGrid key={field.id} cols={field.columns || 2} spacing="md">
           {field.components?.map((child) => renderField(child))}
         </SimpleGrid>
+      );
+    }
+
+    // Tabs: render tabbed navigation panels
+    if (field.type === 'tabs') {
+      const visibleTabs = (field.components ?? []).filter(
+        (tab) => tab.type === 'tab' && isVisible(tab),
+      );
+      if (visibleTabs.length === 0) return null;
+      return (
+        <Tabs key={field.id} defaultValue={visibleTabs[0]?.id}>
+          <Tabs.List mb="md">
+            {visibleTabs.map((tab) => (
+              <Tabs.Tab key={tab.id} value={tab.id}>
+                {tab.label}
+              </Tabs.Tab>
+            ))}
+          </Tabs.List>
+          {visibleTabs.map((tab) => (
+            <Tabs.Panel key={tab.id} value={tab.id}>
+              <Stack gap="md">
+                {tab.components?.map((child) => renderField(child))}
+              </Stack>
+            </Tabs.Panel>
+          ))}
+        </Tabs>
       );
     }
 
