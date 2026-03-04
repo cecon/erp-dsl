@@ -1,5 +1,7 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import '@mantine/code-highlight/styles.css';
+import '@mantine/dropzone/styles.css';
 import './index.css';
 
 import { MantineProvider, createTheme } from '@mantine/core';

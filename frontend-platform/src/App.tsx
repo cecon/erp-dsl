@@ -5,6 +5,7 @@ import { SignUp } from './pages/SignUp';
 import { PlanSelection } from './pages/PlanSelection';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { ProjectSettings } from './pages/dashboard/ProjectSettings';
+import { ChatPanel } from './components/chat/ChatPanel';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -35,6 +36,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <ProjectSettings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <ChatPanel />
             </ProtectedRoute>
           }
         />
