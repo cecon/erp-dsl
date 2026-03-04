@@ -19,8 +19,18 @@ from src.infrastructure.config.settings import settings
 from src.infrastructure.persistence.sqlalchemy.page_repository_impl import (
     PageRepositoryImpl,
 )
+from src.infrastructure.persistence.sqlalchemy.account_repository_impl import (
+    AccountRepositoryImpl,
+)
 from src.infrastructure.persistence.sqlalchemy.tenant_context import (
     enable_tenant_filter,
+)
+from src.application.use_cases.account.signup import SignupUseCase
+from src.application.use_cases.account.login import LoginUseCase
+from src.application.use_cases.account.create_project import CreateProjectUseCase
+from src.application.use_cases.account.create_app import CreateAppUseCase
+from src.infrastructure.persistence.database_provisioning import (
+    SqlAlchemyDatabaseProvisioner,
 )
 import src.infrastructure.persistence.sqlalchemy.tax_models  # noqa: F401  — register tables
 import src.infrastructure.persistence.sqlalchemy.fiscal_catalog_models  # noqa: F401
@@ -118,3 +128,43 @@ def rollback_page_use_case(
 
 def merge_page_use_case(db: Session = Depends(get_db)) -> MergePageUseCase:
     return MergePageUseCase(PageRepositoryImpl(db))
+
+
+# ── Account use case factories ───────────────────────────────────────
+
+def get_account_repo(db: Session = Depends(get_db)) -> AccountRepositoryImpl:
+    return AccountRepositoryImpl(db)
+
+
+def get_signup_use_case(
+    db: Session = Depends(get_db),
+) -> SignupUseCase:
+    return SignupUseCase(
+        repo=AccountRepositoryImpl(db),
+        auth=auth_adapter,
+    )
+
+
+def get_login_use_case(
+    db: Session = Depends(get_db),
+) -> LoginUseCase:
+    return LoginUseCase(
+        repo=AccountRepositoryImpl(db),
+        auth=auth_adapter,
+    )
+
+
+def get_create_project_use_case(
+    db: Session = Depends(get_db),
+) -> CreateProjectUseCase:
+    return CreateProjectUseCase(repo=AccountRepositoryImpl(db))
+
+
+def get_create_app_use_case(
+    db: Session = Depends(get_db),
+) -> CreateAppUseCase:
+    return CreateAppUseCase(
+        repo=AccountRepositoryImpl(db),
+        provisioner=SqlAlchemyDatabaseProvisioner(db),
+    )
+

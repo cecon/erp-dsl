@@ -100,3 +100,18 @@ def provision_database(
 
     engine.dispose()
     return record
+
+
+class SqlAlchemyDatabaseProvisioner:
+    """Adapter implementing the DatabaseProvisioner Protocol.
+
+    Wraps the ``provision_database`` function so it can be injected
+    into use cases via dependency injection.
+    """
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def provision(self, app_id: str) -> None:
+        provision_database(session=self._session, app_id=app_id)
+

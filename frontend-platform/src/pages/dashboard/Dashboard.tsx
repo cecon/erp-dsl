@@ -12,6 +12,7 @@ import {
   Title,
   UnstyledButton,
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import {
   IconApps,
   IconDatabase,
@@ -42,7 +43,13 @@ export function Dashboard() {
     api
       .get('/api/accounts/projects')
       .then(({ data }) => setProjects(data))
-      .catch(() => {})
+      .catch(() => {
+        notifications.show({
+          title: 'Erro',
+          message: 'Não foi possível carregar os projetos',
+          color: 'red',
+        });
+      })
       .finally(() => setLoading(false));
   }, [setProjects]);
 
@@ -57,7 +64,11 @@ export function Dashboard() {
       setModalOpen(false);
       setNewName('');
     } catch {
-      // handled
+      notifications.show({
+        title: 'Erro',
+        message: 'Não foi possível criar o projeto',
+        color: 'red',
+      });
     } finally {
       setCreating(false);
     }

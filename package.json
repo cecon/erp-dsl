@@ -1,0 +1,11 @@
+{
+  "name": "erp-dsl",
+  "private": true,
+  "scripts": {
+    "dev:app": "pnpm --filter erp-dsl-frontend dev",
+    "dev:platform": "pnpm --filter frontend-platform dev",
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint"
+  }
+}

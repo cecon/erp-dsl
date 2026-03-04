@@ -44,35 +44,6 @@ class LLMProviderModel(Base):
     version = Column(Integer, nullable=False, default=1)
 
 
-class SkillModel(Base):
-    """Agent skill definition — global (tenant_id=NULL) or per-tenant."""
-
-    __tablename__ = "skills"
-
-    id = Column(String(36), primary_key=True)
-    tenant_id = Column(String(36), nullable=True, index=True)
-    name = Column(String(128), nullable=False)
-    description = Column(Text, nullable=True)
-    skill_type = Column(
-        Enum("builtin", "custom", "llm", "http", name="skill_type_enum"),
-        nullable=False,
-        default="builtin",
-    )
-    implementation = Column(Text, nullable=True)
-    params_schema = Column(JSON, nullable=True)
-    is_active = Column(Boolean, nullable=False, default=True)
-    created_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-    )
-    version = Column(Integer, nullable=False, default=1)
-
-
 class ChatSessionModel(Base):
     """Chat session between a user and the agent."""
 

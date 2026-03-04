@@ -1,73 +1,65 @@
-# React + TypeScript + Vite
+# AutoSystem Platform — Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Painel de gestão da plataforma SaaS AutoSystem. Esta é a camada de **marketplace/admin** onde o usuário gerencia sua conta, projetos e aplicativos.
 
-Currently, two official plugins are available:
+> **Analogia**: Assim como o Vercel Dashboard gerencia deploys, ou o Supabase Dashboard gerencia projetos — este frontend gerencia os aplicativos ERP do AutoSystem.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Stack
 
-## React Compiler
+- **React 19** + TypeScript
+- **Vite 7** (build tool)
+- **Mantine 7** (UI components)
+- **Zustand** (state management)
+- **React Query** (server state)
+- **Axios** (HTTP client)
+- **React Router 7** (routing)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the ESLint configuration
+- **Autenticação**: Signup, Login com JWT
+- **Planos**: Seleção de plano (Free / Pro)
+- **Projetos**: CRUD de projetos com sidebar estilo Supabase
+- **Empresa**: Configuração de dados da empresa (PJ/PF)
+- **Apps**: Criação de aplicativos com configuração de LLM
+- **Database**: Visualização de credenciais do banco isolado
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Architecture
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+  pages/
+    Login.tsx              # Tela de login
+    SignUp.tsx             # Cadastro de conta
+    PlanSelection.tsx      # Seleção de plano
+    dashboard/
+      Dashboard.tsx        # Lista de projetos + sidebar
+      ProjectSettings.tsx  # Orquestrador de tabs do projeto
+      CreateAppModal.tsx   # Modal de criação de app
+      tabs/
+        GeneralTab.tsx     # Info geral do projeto
+        CompanyTab.tsx     # Dados da empresa
+        AppsTab.tsx        # Lista de apps
+        DatabaseTab.tsx    # Conexão do banco
+  services/
+    api.ts                 # Axios com JWT interceptor
+  state/
+    authStore.ts           # Zustand: autenticação
+    dashboardStore.ts      # Zustand: projetos e apps
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
+pnpm dev          # http://localhost:5175
 ```
+
+## Build
+
+```bash
+pnpm build        # Output em dist/
+```
+
+## Docker
+
+O Dockerfile usa multi-stage build (Node → Nginx). Em produção, as requisições `/api/*` são proxied para o backend via Nginx.
