@@ -7,7 +7,6 @@ import {
     IconUpload,
     IconX,
 } from '@tabler/icons-react'
-import { useNavigate } from 'react-router-dom'
 
 import { MessageList } from './MessageList'
 import { ChatInput } from './ChatInput/ChatInput'
@@ -97,8 +96,11 @@ const ACCEPTED_TYPES = [
     'application/json',
 ]
 
-export function ChatPanel() {
-    const navigate = useNavigate()
+interface ChatPanelProps {
+    onNavigateBack?: () => void
+}
+
+export function ChatPanel({ onNavigateBack }: ChatPanelProps) {
     const dropzoneRef = useRef<() => void>(null)
     const [attachments, setAttachments] = useState<AttachmentFile[]>([])
     const [isDragging, setIsDragging] = useState(false)
@@ -239,7 +241,7 @@ export function ChatPanel() {
                                 variant="subtle"
                                 color="gray"
                                 size="md"
-                                onClick={() => navigate('/')}
+                                onClick={onNavigateBack}
                             >
                                 <IconArrowLeft size={18} />
                             </ActionIcon>
