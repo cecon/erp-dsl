@@ -22,7 +22,7 @@ services:
     environment:
       ERP_DATABASE_URL: postgresql://erpdsl:erpdsl@postgres:5432/erpdsl
       ERP_JWT_SECRET: super-secret-change-in-prod
-      ERP_CORS_ORIGINS: '["http://localhost:5174"]'
+      ERP_CORS_ORIGINS: '["http://localhost:5174","http://localhost:5175"]'
 
       PYTHONPATH: /app
     depends_on:
@@ -33,6 +33,13 @@ services:
     build: ./frontend
     ports:
       - "5174:5174"
+    depends_on:
+      - backend
+
+  frontend-platform:
+    build: ./frontend-platform
+    ports:
+      - "5175:5175"
     depends_on:
       - backend
 

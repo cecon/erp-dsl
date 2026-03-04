@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.adapters.http.error_handlers import register_error_handlers
 from src.adapters.http.routers import (
+    account_router,
     agent_router,
     auth_router,
     generic_crud_router,
@@ -83,6 +84,13 @@ def create_app() -> FastAPI:
         workflow_router.router,
         prefix="/workflows",
         tags=["Workflows"],
+    )
+
+    # Account / Platform management
+    app.include_router(
+        account_router.router,
+        prefix="/api/accounts",
+        tags=["Accounts"],
     )
 
     # Standardized error handling

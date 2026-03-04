@@ -33,6 +33,10 @@ from src.infrastructure.persistence.seed_schemas_workflows import (
     WORKFLOWS_PAGE_SCHEMA,
     WORKFLOWS_FORM_SCHEMA,
 )
+from src.infrastructure.persistence.seed_schemas_skills import (
+    SKILLS_PAGE_SCHEMA,
+    SKILLS_FORM_SCHEMA,
+)
 from src.infrastructure.persistence.sqlalchemy.models import (
     PageVersionModel,
     TenantModel,
@@ -55,6 +59,8 @@ SEED_PAGES = [
     ("fiscal_rules_form", FISCAL_RULES_FORM_SCHEMA),
     ("workflows", WORKFLOWS_PAGE_SCHEMA),
     ("workflows_form", WORKFLOWS_FORM_SCHEMA),
+    ("skills", SKILLS_PAGE_SCHEMA),
+    ("skills_form", SKILLS_FORM_SCHEMA),
     ("llm_providers", LLM_PROVIDERS_PAGE_SCHEMA),
     ("llm_providers_form", LLM_PROVIDERS_FORM_SCHEMA),
     ("_sidebar", SIDEBAR_SCHEMA),
@@ -137,4 +143,56 @@ def seed_database(session: Session) -> None:
     from src.infrastructure.persistence.seed_agent import seed_agent_data
     seed_agent_data()
 
+    # 6. Seed built-in skills metadata
+    from src.infrastructure.persistence.seed_skills import seed_skills
+    skills_count = seed_skills(session, DEFAULT_TENANT_ID)
+    if skills_count:
+        print(f"  Seeded {skills_count} skill records")
+
+    # 7. Seed subscription plans
+    _seed_plans(session)
+
     session.commit()
+
+
+def _seed_plans(session: Session) -> None:
+    """Create Free and Pro plans if they don't exist."""
+    from src.infrastructure.persistence.sqlalchemy.account_models import (
+        PlanModel,
+    )
+
+    existing = session.execute(
+        select(PlanModel).where(PlanModel.slug == "free")
+    ).scalar_one_or_none()
+    if existing:
+        return
+
+    import uuid as _uuid
+
+    free = PlanModel(
+        id=str(_uuid.uuid4()),
+        name="Free",
+        slug="free",
+        price=0,
+        enabled=True,
+        features={
+            "max_projects": 1,
+            "max_apps": 1,
+            "max_records": 1000,
+        },
+    )
+    pro = PlanModel(
+        id=str(_uuid.uuid4()),
+        name="Pro",
+        slug="pro",
+        price=1000,
+        enabled=False,
+        features={
+            "max_projects": 10,
+            "max_apps": 50,
+            "max_records": -1,
+            "priority_support": True,
+        },
+    )
+    session.add_all([free, pro])
+    print("  Seeded subscription plans (Free + Pro)")

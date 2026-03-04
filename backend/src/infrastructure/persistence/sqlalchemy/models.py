@@ -196,3 +196,37 @@ class WorkflowModel(Base):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+
+
+class SkillModel(Base):
+    """Persists agent skill metadata (description, params, enabled flag).
+
+    The actual skill implementation (Python function) lives in
+    ``application/agent/skills/`` and self-registers in the in-memory
+    ``skill_registry``.  This table stores the *editable* metadata that
+    the LLM and the admin UI consume.
+    """
+    __tablename__ = "skills"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "name", name="uq_skill_tenant_name",
+        ),
+    )
+
+    id = Column(String(36), primary_key=True)
+    tenant_id = Column(String(36), nullable=False, index=True)
+    name = Column(String(64), nullable=False, index=True)
+    description = Column(Text, nullable=False)
+    params_schema = Column(JSON, nullable=False, default=dict)
+    category = Column(String(32), nullable=False, server_default="general")
+    enabled = Column(Boolean, nullable=False, default=True)
+    version = Column(Integer, nullable=False, default=1)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )

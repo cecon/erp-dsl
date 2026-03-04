@@ -3,6 +3,7 @@ import { CoreLayout } from './core/layout/CoreLayout';
 import { PageRenderer } from './core/engine/PageRenderer';
 import { DashboardRenderer } from './core/engine/DashboardRenderer';
 import { Login } from './pages/Login';
+import { ComponentShowcase } from './pages/ComponentShowcase';
 import { useAuthStore } from './state/authStore';
 import { OttoProvider } from './features/otto';
 
@@ -25,6 +26,7 @@ export default function App() {
                 <CoreLayout>
                   <Routes>
                     <Route path="/" element={<DashboardRenderer />} />
+                    <Route path="/components" element={<ComponentShowcase />} />
                     <Route path="/pages/:pageKey" element={<PageRenderer />} />
                   </Routes>
                 </CoreLayout>
@@ -36,4 +38,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-

@@ -436,12 +436,24 @@ SIDEBAR_SCHEMA: dict[str, Any] = {
                     "icon": "workflow",
                     "path": "/pages/workflows",
                 },
+                {
+                    "id": "nav-skills",
+                    "label": "Skills",
+                    "icon": "robot",
+                    "path": "/pages/skills",
+                },
             ],
         },
         {
             "id": "settings",
             "label": "Settings",
             "items": [
+                {
+                    "id": "nav-components",
+                    "label": "Componentes",
+                    "icon": "puzzle",
+                    "path": "/components",
+                },
                 {
                     "id": "nav-llm-providers",
                     "label": "Provedores LLM",
