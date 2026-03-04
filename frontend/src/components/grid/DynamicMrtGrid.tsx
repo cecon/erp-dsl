@@ -13,6 +13,10 @@ interface ColumnSchema {
   id: string;
   key: string;
   label: string;
+  /** MRT column size in px (flex-basis). */
+  size?: number;
+  /** When true (with layoutMode 'grid-no-grow'), column expands to fill space. */
+  grow?: boolean | number;
 }
 
 interface DynamicMrtGridProps {
@@ -40,8 +44,10 @@ export function DynamicMrtGrid({
   const mrtColumns = useMemo<MRT_ColumnDef<any>[]>(() => {
     return columnSchema.map((col) => ({
       id: col.id,
-      accessorKey: col.key, // Ensure accessorKey exactly matches object keys
+      accessorKey: col.key,
       header: col.label,
+      ...(col.size != null ? { size: col.size } : {}),
+      ...(col.grow != null ? { grow: col.grow } : {}),
       Cell: ({ cell }) => {
         const val = cell.getValue();
         if (col.key === 'price' && val != null) {
@@ -55,12 +61,12 @@ export function DynamicMrtGrid({
   const table = useMantineReactTable({
     columns: mrtColumns,
     data: data,
-    
+
     // Core features
     enableGrouping: true,
     enableGlobalFilter: true, // Prominent top search bar
     enableColumnResizing: true,
-    
+
     // Pagination (Manual / Server-side)
     manualPagination: true,
     rowCount: total,
@@ -70,7 +76,7 @@ export function DynamicMrtGrid({
         typeof updater === 'function'
           ? updater({ pageIndex: page - 1, pageSize })
           : updater;
-      
+
       // PageRenderer uses 1-based page indexing
       onPageChange(newState.pageIndex + 1);
     },
@@ -79,8 +85,11 @@ export function DynamicMrtGrid({
         pageIndex: page - 1, // MRT uses 0-based page index
         pageSize,
       },
-      isLoading: false, // Could be linked to React Query if passed
+      isLoading: false,
     },
+
+    // Layout: 'grid' mode = all columns grow by default (no spacer)
+    layoutMode: 'grid',
 
     // Actions
     enableRowActions: !!(onEdit || onDelete),
@@ -88,11 +97,17 @@ export function DynamicMrtGrid({
     displayColumnDefOptions: {
       'mrt-row-actions': {
         header: 'Ações',
+        size: 100,
+        grow: false,
         mantineTableHeadCellProps: {
-          align: 'right',
+          style: {
+            textAlign: 'right',
+          },
         },
         mantineTableBodyCellProps: {
-          align: 'right',
+          style: {
+            textAlign: 'right',
+          },
         },
       },
     },
@@ -127,7 +142,6 @@ export function DynamicMrtGrid({
       </Group>
     ),
 
-    // Theming & UX
     mantineTableProps: {
       highlightOnHover: true,
       withColumnBorders: false,
