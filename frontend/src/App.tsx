@@ -6,7 +6,6 @@ import { Login } from './pages/Login';
 import { ComponentShowcase } from './pages/ComponentShowcase';
 import { useAuthStore } from './state/authStore';
 import { OttoProvider } from './features/otto';
-import { ChatPage } from './pages/ChatPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -28,19 +27,18 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <CoreLayout>
-                  <Routes>
-                    <Route path="/" element={<DashboardRenderer />} />
-                    <Route path="/components" element={<ComponentShowcase />} />
-                    <Route path="/pages/:pageKey" element={<PageRenderer />} />
-                  </Routes>
-                </CoreLayout>
-              </ProtectedRoute>
-            }
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <CoreLayout>
+                <Routes>
+                  <Route path="/" element={<DashboardRenderer />} />
+                  <Route path="/components" element={<ComponentShowcase />} />
+                  <Route path="/pages/:pageKey" element={<PageRenderer />} />
+                </Routes>
+              </CoreLayout>
+            </ProtectedRoute>
+          }
           />
         </Routes>
       </OttoProvider>
