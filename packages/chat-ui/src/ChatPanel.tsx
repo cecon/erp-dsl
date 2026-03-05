@@ -98,9 +98,10 @@ const ACCEPTED_TYPES = [
 
 interface ChatPanelProps {
     onNavigateBack?: () => void
+    showContextPanel?: boolean
 }
 
-export function ChatPanel({ onNavigateBack }: ChatPanelProps) {
+export function ChatPanel({ onNavigateBack, showContextPanel = false }: ChatPanelProps) {
     const dropzoneRef = useRef<() => void>(null)
     const [attachments, setAttachments] = useState<AttachmentFile[]>([])
     const [isDragging, setIsDragging] = useState(false)
@@ -265,7 +266,7 @@ export function ChatPanel({ onNavigateBack }: ChatPanelProps) {
                     </div>
                     <Group gap={4}>
                         <Badge variant="dot" color="green" size="sm">
-                            GPT-4
+                            Gemini
                         </Badge>
                     </Group>
                 </div>
@@ -336,7 +337,7 @@ export function ChatPanel({ onNavigateBack }: ChatPanelProps) {
             </div>
 
             {/* Context Panel */}
-            <ContextPanel />
+            {showContextPanel && <ContextPanel />}
         </div>
     )
 }

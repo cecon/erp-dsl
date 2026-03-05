@@ -1,16 +1,23 @@
 /**
- * OttoPanel — integrated side panel for the Otto universal chat.
+ * OttoPanel — Sleek side panel chat, inspired by VS Code Copilot.
  *
- * Renders INSIDE AppShell.Aside (pushes main content).
- * Uses ChatInput from @erp-dsl/chat-ui for rich TipTap editing.
+ * Single column, ~400px wide, renders in AppShell.Aside.
+ * Uses ChatInput (TipTap) and MarkdownRenderer from @erp-dsl/chat-ui.
  */
 
-import { ActionIcon, Loader, Text, Group } from '@mantine/core';
+import { ActionIcon, Badge, Loader, ScrollArea, Text, Tooltip } from '@mantine/core';
 import { useCallback, useEffect, useRef } from 'react';
 import { ChatInput } from '@erp-dsl/chat-ui';
+import {
+  IconRobot,
+  IconPlus,
+  IconX,
+} from '@tabler/icons-react';
 import { OttoMessage } from './OttoMessage';
 import { useOttoContext } from './OttoProvider';
 import type { Message } from '@erp-dsl/chat-ui';
+
+import './otto-panel.css';
 
 export function OttoPanel() {
   const { close, context, messages, status, send, reset, submitForm, respondInteractive } = useOttoContext();
@@ -18,12 +25,15 @@ export function OttoPanel() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') ||
+        scrollRef.current.querySelector('.mantine-ScrollArea-viewport');
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
   }, [messages]);
 
   const handleSend = useCallback((msg: Message) => {
-    // Extract text from the Message content array
     const text = msg.content
       .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
       .map((c) => c.text)
@@ -35,75 +45,78 @@ export function OttoPanel() {
   }, [status, send, context.pageKey]);
 
   const handleStop = useCallback(() => {
-    // No-op for now — SSE abort is handled in useOtto
+    // SSE abort handled in useOtto
   }, []);
 
   const subtitle = context.pageTitle ? ` · ${context.pageTitle}` : '';
 
   return (
-    <div className="otto-panel">
-      {/* Header */}
-      <div className="otto-header">
-        <div className="otto-header-left">
-          <span className="otto-header-icon">🐾</span>
-          <span className="otto-header-title">Otto</span>
-          {subtitle && (
-            <span className="otto-header-context">{subtitle}</span>
-          )}
+    <div className="copilot-panel">
+      {/* ── Header ─ */}
+      <div className="copilot-header">
+        <div className="copilot-header__left">
+          <div className="copilot-header__avatar">
+            <IconRobot size={16} />
+          </div>
+          <div className="copilot-header__info">
+            <span className="copilot-header__title">Otto</span>
+            {subtitle && <span className="copilot-header__ctx">{subtitle}</span>}
+          </div>
         </div>
-        <Group gap="xs">
+        <div className="copilot-header__right">
+          <Badge variant="dot" color="green" size="xs">Gemini</Badge>
           {messages.length > 0 && (
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              size="sm"
-              onClick={reset}
-              title="Limpar conversa"
-            >
-              🗑️
-            </ActionIcon>
+            <Tooltip label="Nova conversa" withArrow position="bottom">
+              <ActionIcon variant="subtle" color="gray" size="xs" onClick={reset}>
+                <IconPlus size={14} />
+              </ActionIcon>
+            </Tooltip>
           )}
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            size="sm"
-            onClick={close}
-          >
-            ✕
-          </ActionIcon>
-        </Group>
+          <Tooltip label="Fechar" withArrow position="bottom">
+            <ActionIcon variant="subtle" color="gray" size="xs" onClick={close}>
+              <IconX size={14} />
+            </ActionIcon>
+          </Tooltip>
+        </div>
       </div>
 
-      {/* Messages */}
-      <div className="otto-messages" ref={scrollRef}>
+      {/* ── Status bar ─ */}
+      {status === 'streaming' && (
+        <div className="copilot-status">
+          <Loader size={10} type="dots" color="var(--accent)" />
+          <Text size="xs" c="dimmed">Gerando resposta…</Text>
+        </div>
+      )}
+
+      {/* ── Messages ─ */}
+      <ScrollArea className="copilot-messages" ref={scrollRef} type="auto" scrollbarSize={4}>
         {messages.length === 0 ? (
-          <div className="otto-empty">
-            <div className="otto-empty-icon">🐾</div>
-            <Text size="sm" c="dimmed" ta="center">
-              Olá! Sou o <strong>Otto</strong>, seu assistente IA.
-              <br />
-              Como posso ajudar?
+          <div className="copilot-empty">
+            <div className="copilot-empty__icon">
+              <IconRobot size={32} stroke={1.2} />
+            </div>
+            <Text size="sm" fw={600}>Olá! Sou o Otto</Text>
+            <Text size="xs" c="dimmed" ta="center" maw={260}>
+              Seu assistente IA. Pergunte qualquer coisa, use{' '}
+              <code>@</code> agentes, <code>/</code> workflows.
             </Text>
           </div>
         ) : (
-          messages.map((msg) => (
-            <OttoMessage
-              key={msg.id}
-              message={msg}
-              onFormSubmit={submitForm}
-              onInteractiveRespond={respondInteractive}
-            />
-          ))
-        )}
-        {status === 'streaming' && messages[messages.length - 1]?.role !== 'assistant' && (
-          <div className="otto-typing">
-            <Loader size="xs" type="dots" />
+          <div className="copilot-message-list">
+            {messages.map((msg) => (
+              <OttoMessage
+                key={msg.id}
+                message={msg}
+                onFormSubmit={submitForm}
+                onInteractiveRespond={respondInteractive}
+              />
+            ))}
           </div>
         )}
-      </div>
+      </ScrollArea>
 
-      {/* Input — TipTap rich editor */}
-      <div className="otto-input-area">
+      {/* ── Input ─ */}
+      <div className="copilot-input">
         <ChatInput onSend={handleSend} onStop={handleStop} />
       </div>
     </div>

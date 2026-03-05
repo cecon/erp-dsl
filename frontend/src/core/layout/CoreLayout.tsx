@@ -1,9 +1,10 @@
-import { AppShell } from '@mantine/core';
-import { useEffect } from 'react';
+import { AppShell, Drawer } from '@mantine/core';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Header } from '../../components/layout/Header';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { ThemeDrawer } from '../../components/layout/ThemeDrawer';
-import { OttoPanel, useOttoContext } from '../../features/otto';
+import { ChatPanel } from '@erp-dsl/chat-ui';
+import { useOttoContext } from '../../features/otto';
 import { useThemeStore } from '../../state/themeStore';
 
 interface CoreLayoutProps {
@@ -12,7 +13,10 @@ interface CoreLayoutProps {
 
 const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 80;
-const OTTO_ASIDE_WIDTH = 400;
+const DRAWER_MIN_WIDTH = 360;
+const DRAWER_MAX_WIDTH = 1200;
+const DRAWER_DEFAULT_WIDTH = 520;
+const DRAWER_STORAGE_KEY = 'otto-drawer-width';
 
 /** Maps Mantine color names to their primary hex values for CSS custom props. */
 const COLOR_HEX: Record<string, string> = {
@@ -25,11 +29,54 @@ const COLOR_HEX: Record<string, string> = {
   green: '#22c55e',
 };
 
+function getStoredWidth(): number {
+  try {
+    const stored = localStorage.getItem(DRAWER_STORAGE_KEY);
+    if (stored) {
+      const w = parseInt(stored, 10);
+      if (w >= DRAWER_MIN_WIDTH && w <= DRAWER_MAX_WIDTH) return w;
+    }
+  } catch { /* ignore */ }
+  return DRAWER_DEFAULT_WIDTH;
+}
+
 export function CoreLayout({ children }: CoreLayoutProps) {
   const collapsed = useThemeStore((s) => s.sidebarCollapsed);
   const primaryColor = useThemeStore((s) => s.primaryColor);
   const navWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
-  const { opened: ottoOpened } = useOttoContext();
+  const { opened: ottoOpened, close: closeOtto } = useOttoContext();
+
+  const [drawerWidth, setDrawerWidth] = useState(getStoredWidth);
+  const isDragging = useRef(false);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      const newWidth = Math.min(DRAWER_MAX_WIDTH, Math.max(DRAWER_MIN_WIDTH, window.innerWidth - ev.clientX));
+      setDrawerWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      // Persist
+      setDrawerWidth((w) => {
+        localStorage.setItem(DRAWER_STORAGE_KEY, String(w));
+        return w;
+      });
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, []);
 
   // Sync CSS custom property with selected theme color
   useEffect(() => {
@@ -46,11 +93,6 @@ export function CoreLayout({ children }: CoreLayoutProps) {
     <AppShell
       header={{ height: 56 }}
       navbar={{ width: navWidth, breakpoint: 'sm' }}
-      aside={{
-        width: OTTO_ASIDE_WIDTH,
-        breakpoint: 'sm',
-        collapsed: { desktop: !ottoOpened, mobile: !ottoOpened },
-      }}
       padding="xl"
       transitionDuration={200}
       transitionTimingFunction="ease"
@@ -58,7 +100,6 @@ export function CoreLayout({ children }: CoreLayoutProps) {
         main: {
           background: 'var(--content-bg)',
           minHeight: '100vh',
-          transition: 'padding-inline-end 200ms ease',
         },
         header: {
           background: 'var(--header-bg)',
@@ -68,11 +109,6 @@ export function CoreLayout({ children }: CoreLayoutProps) {
           background: 'var(--sidebar-bg)',
           borderRight: 'none',
           transition: 'width 200ms ease',
-        },
-        aside: {
-          background: 'var(--card-bg)',
-          borderLeft: '1px solid var(--border-default)',
-          transition: 'width 200ms ease, transform 200ms ease',
         },
       }}
     >
@@ -88,11 +124,46 @@ export function CoreLayout({ children }: CoreLayoutProps) {
         <div className="fade-in">{children}</div>
       </AppShell.Main>
 
-      {ottoOpened && (
-        <AppShell.Aside>
-          <OttoPanel />
-        </AppShell.Aside>
-      )}
+      {/* Otto Chat — Drawer resizável */}
+      <Drawer
+        opened={ottoOpened}
+        onClose={closeOtto}
+        position="right"
+        size={drawerWidth}
+        withCloseButton={false}
+        overlayProps={{ backgroundOpacity: 0.3, blur: 2 }}
+        transitionProps={{ duration: 200 }}
+        styles={{
+          body: { padding: 0, height: '100%' },
+          content: { background: 'var(--card-bg, #1a1f2e)', overflow: 'visible' },
+        }}
+      >
+        {/* Resize handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 5,
+            cursor: 'col-resize',
+            zIndex: 10,
+            background: 'transparent',
+          }}
+          onMouseEnter={(e) => {
+            (e.target as HTMLElement).style.background = 'var(--accent, #6366f1)';
+            (e.target as HTMLElement).style.opacity = '0.5';
+          }}
+          onMouseLeave={(e) => {
+            if (!isDragging.current) {
+              (e.target as HTMLElement).style.background = 'transparent';
+              (e.target as HTMLElement).style.opacity = '1';
+            }
+          }}
+        />
+        <ChatPanel onNavigateBack={closeOtto} />
+      </Drawer>
 
       <ThemeDrawer />
     </AppShell>

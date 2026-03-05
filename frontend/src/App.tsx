@@ -20,25 +20,18 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
-            path="/chat"
+            path="/*"
             element={
               <ProtectedRoute>
-                <ChatPage />
+                <CoreLayout>
+                  <Routes>
+                    <Route path="/" element={<DashboardRenderer />} />
+                    <Route path="/components" element={<ComponentShowcase />} />
+                    <Route path="/pages/:pageKey" element={<PageRenderer />} />
+                  </Routes>
+                </CoreLayout>
               </ProtectedRoute>
             }
-          />
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <CoreLayout>
-                <Routes>
-                  <Route path="/" element={<DashboardRenderer />} />
-                  <Route path="/components" element={<ComponentShowcase />} />
-                  <Route path="/pages/:pageKey" element={<PageRenderer />} />
-                </Routes>
-              </CoreLayout>
-            </ProtectedRoute>
-          }
           />
         </Routes>
       </OttoProvider>

@@ -1,0 +1,265 @@
+/* ══════════════════════════════════════════════════════════════════
+   Otto Copilot-style Side Panel — ~400px, single column, sleek
+   ══════════════════════════════════════════════════════════════════ */
+
+.copilot-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--card-bg, #1a1f2e);
+  overflow: hidden;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.copilot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
+  flex-shrink: 0;
+}
+
+.copilot-header__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copilot-header__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.copilot-header__info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.copilot-header__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #e5e7eb);
+  letter-spacing: -0.01em;
+}
+
+.copilot-header__ctx {
+  font-size: 10px;
+  color: var(--text-muted, #6b7280);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.copilot-header__right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Status bar ────────────────────────────────────────────────── */
+.copilot-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--accent-subtle, rgba(99, 102, 241, 0.08));
+  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
+  flex-shrink: 0;
+}
+
+/* ── Messages ──────────────────────────────────────────────────── */
+.copilot-messages {
+  flex: 1;
+  min-height: 0;
+}
+
+.copilot-messages .mantine-ScrollArea-viewport {
+  padding: 12px;
+}
+
+.copilot-message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Empty state ───────────────────────────────────────────────── */
+.copilot-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+  gap: 8px;
+  padding: 24px;
+}
+
+.copilot-empty__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.15),
+    rgba(139, 92, 246, 0.15)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent, #6366f1);
+  margin-bottom: 4px;
+}
+
+.copilot-empty code {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent, #6366f1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ── Input ─────────────────────────────────────────────────────── */
+.copilot-input {
+  border-top: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+/* Slimmer TipTap editor inside the copilot panel */
+.copilot-input .chat-input-wrapper {
+  border-radius: 10px;
+}
+
+.copilot-input .tiptap-editor {
+  min-height: 36px;
+  max-height: 120px;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.copilot-input .chat-input__hint {
+  font-size: 10px;
+  padding: 2px 10px 4px;
+}
+
+.copilot-input .chat-input__send {
+  width: 28px;
+  height: 28px;
+  margin: 4px;
+}
+
+/* ── Otto messages inside copilot (override) ───────────────────── */
+.copilot-panel .otto-msg {
+  margin-bottom: 6px;
+}
+
+.copilot-panel .otto-msg--user {
+  background: var(--accent, #6366f1);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 14px 14px 4px 14px;
+  font-size: 13px;
+  align-self: flex-end;
+  max-width: 90%;
+  margin-left: auto;
+  word-break: break-word;
+}
+
+.copilot-panel .otto-msg--assistant {
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.copilot-panel .otto-msg--assistant .markdown-body {
+  font-size: 13px;
+}
+
+.copilot-panel .otto-msg--assistant .markdown-body h1,
+.copilot-panel .otto-msg--assistant .markdown-body h2,
+.copilot-panel .otto-msg--assistant .markdown-body h3 {
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+.copilot-panel .otto-msg--assistant .markdown-body pre {
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.copilot-panel .otto-msg--assistant .markdown-body table {
+  font-size: 12px;
+}
+
+.copilot-panel .otto-msg--tool {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.copilot-panel .otto-msg--system {
+  padding: 4px 0;
+}
+
+.copilot-panel .otto-msg--form,
+.copilot-panel .otto-msg--component {
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+}
+
+/* ── Light mode ────────────────────────────────────────────────── */
+[data-mantine-color-scheme="light"] .copilot-panel {
+  background: #ffffff;
+}
+
+[data-mantine-color-scheme="light"] .copilot-header {
+  border-color: #e5e7eb;
+}
+
+[data-mantine-color-scheme="light"] .copilot-status {
+  background: rgba(99, 102, 241, 0.05);
+  border-color: #e5e7eb;
+}
+
+[data-mantine-color-scheme="light"] .copilot-input {
+  border-color: #e5e7eb;
+}
+
+[data-mantine-color-scheme="light"] .copilot-panel .otto-msg--user {
+  background: var(--accent, #6366f1);
+  color: white;
+}
+
+[data-mantine-color-scheme="light"] .copilot-panel .otto-msg--tool {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+[data-mantine-color-scheme="light"] .copilot-panel .otto-msg--form,
+[data-mantine-color-scheme="light"] .copilot-panel .otto-msg--component {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+[data-mantine-color-scheme="light"] .copilot-empty__icon {
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.1),
+    rgba(139, 92, 246, 0.1)
+  );
+}

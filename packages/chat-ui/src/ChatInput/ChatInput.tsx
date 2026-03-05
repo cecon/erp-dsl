@@ -241,25 +241,23 @@ export function ChatInput({
                     {isStreaming ? (
                         <Tooltip label="Parar geração" withArrow>
                             <ActionIcon
-                                size="lg"
-                                variant="filled"
+                                size="md"
+                                variant="subtle"
                                 color="red"
-                                radius="xl"
                                 onClick={onStop}
                             >
-                                <IconPlayerStop size={18} />
+                                <IconPlayerStop size={16} />
                             </ActionIcon>
                         </Tooltip>
                     ) : (
                         <Tooltip label="Enviar (Enter)" withArrow>
                             <ActionIcon
-                                size="lg"
-                                variant="filled"
-                                color="indigo"
-                                radius="xl"
+                                size="md"
+                                variant="subtle"
+                                color="gray"
                                 onClick={handleSend}
                             >
-                                <IconSend size={18} />
+                                <IconSend size={16} />
                             </ActionIcon>
                         </Tooltip>
                     )}
