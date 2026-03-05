@@ -2,16 +2,18 @@
  * OttoPanel — integrated side panel for the Otto universal chat.
  *
  * Renders INSIDE AppShell.Aside (pushes main content).
+ * Uses ChatInput from @erp-dsl/chat-ui for rich TipTap editing.
  */
 
-import { TextInput, ActionIcon, Loader, Text, Group } from '@mantine/core';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActionIcon, Loader, Text, Group } from '@mantine/core';
+import { useCallback, useEffect, useRef } from 'react';
+import { ChatInput } from '@erp-dsl/chat-ui';
 import { OttoMessage } from './OttoMessage';
 import { useOttoContext } from './OttoProvider';
+import type { Message } from '@erp-dsl/chat-ui';
 
 export function OttoPanel() {
   const { close, context, messages, status, send, reset, submitForm, respondInteractive } = useOttoContext();
-  const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,22 +22,21 @@ export function OttoPanel() {
     }
   }, [messages]);
 
-  const handleSend = useCallback(() => {
-    const trimmed = input.trim();
-    if (!trimmed || status === 'streaming') return;
-    send(trimmed, context.pageKey);
-    setInput('');
-  }, [input, status, send, context.pageKey]);
+  const handleSend = useCallback((msg: Message) => {
+    // Extract text from the Message content array
+    const text = msg.content
+      .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+      .map((c) => c.text)
+      .join('\n')
+      .trim();
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend]
-  );
+    if (!text || status === 'streaming') return;
+    send(text, context.pageKey);
+  }, [status, send, context.pageKey]);
+
+  const handleStop = useCallback(() => {
+    // No-op for now — SSE abort is handled in useOtto
+  }, []);
 
   const subtitle = context.pageTitle ? ` · ${context.pageTitle}` : '';
 
@@ -101,35 +102,9 @@ export function OttoPanel() {
         )}
       </div>
 
-      {/* Input */}
+      {/* Input — TipTap rich editor */}
       <div className="otto-input-area">
-        <TextInput
-          placeholder="Digite sua mensagem…"
-          value={input}
-          onChange={(e) => setInput(e.currentTarget.value)}
-          onKeyDown={handleKeyDown}
-          disabled={status === 'streaming'}
-          size="sm"
-          className="otto-input"
-          styles={{
-            input: {
-              background: 'var(--input-bg)',
-              border: '1px solid var(--input-border)',
-            },
-          }}
-          rightSection={
-            <ActionIcon
-              variant="filled"
-              color="blue"
-              size="sm"
-              onClick={handleSend}
-              disabled={!input.trim() || status === 'streaming'}
-              radius="xl"
-            >
-              ↑
-            </ActionIcon>
-          }
-        />
+        <ChatInput onSend={handleSend} onStop={handleStop} />
       </div>
     </div>
   );

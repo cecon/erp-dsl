@@ -21,13 +21,20 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <ChatPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/*"
             element={
               <ProtectedRoute>
                 <CoreLayout>
                   <Routes>
                     <Route path="/" element={<DashboardRenderer />} />
-                    <Route path="/chat" element={<ChatPage />} />
                     <Route path="/components" element={<ComponentShowcase />} />
                     <Route path="/pages/:pageKey" element={<PageRenderer />} />
                   </Routes>

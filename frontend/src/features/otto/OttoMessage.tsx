@@ -22,6 +22,7 @@ import {
 } from '@mantine/core';
 import { DynamicForm } from '../../core/engine/DynamicForm';
 import { getComponent } from '../../core/engine/ComponentRegistry';
+import { MarkdownRenderer } from '@erp-dsl/chat-ui';
 import type { OttoMessage as OttoMessageType } from './types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -334,10 +335,7 @@ export function OttoMessage({ message, onFormSubmit, onInteractiveRespond }: Ott
   // Assistant
   return (
     <div className="otto-msg otto-msg--assistant">
-      <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
-        {content}
-        {streaming && <span className="otto-msg-cursor">▊</span>}
-      </Text>
+      <MarkdownRenderer content={content || ''} isStreaming={streaming} />
     </div>
   );
 }
