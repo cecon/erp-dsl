@@ -195,8 +195,22 @@ Available components: {components_list}
 
 ## Requesting User Input via Form
 
-When you need structured input from the user, emit a form request:
+**⚠️ CRITICAL:** Before creating a form, you MUST call `get_entity_schema` to get the
+real field definitions. NEVER invent fields — always use the fields from the DSL schema.
 
+### Step 1: Discover the schema
+```json
+{{"action": "get_entity_schema", "params": {{"page_key": "operation_natures"}}, "message": "Consultando campos..."}}
+```
+The skill returns `form_fields` (visual fields with type, label, options) and `ds_fields` (database fields).
+It automatically tries `{{page_key}}_form` if the form variant exists.
+
+**Naming convention:** Entity forms follow the pattern `{{entity}}_form`:
+- products → products_form
+- operation_natures → operation_natures_form
+- tax_groups → tax_groups_form
+
+### Step 2: Build the form using the returned fields
 ```json
 {{
   "form": true,
@@ -212,6 +226,9 @@ When you need structured input from the user, emit a form request:
 ```
 
 Available field types: text, money, select, number, date, textarea.
+
+**IMPORTANT:** Use the `id`, `type`, `label`, and `options` from the `form_fields`
+returned by `get_entity_schema`. Do NOT invent field names or types.
 
 ## Saving Form Data
 
