@@ -87,13 +87,15 @@ export function Header() {
         {/* Otto Toggle */}
         <Tooltip label={ottoOpened ? 'Fechar Otto' : 'Abrir Otto'} position="bottom">
           <ActionIcon
-            variant={ottoOpened ? 'filled' : 'subtle'}
-            color={ottoOpened ? 'blue' : 'gray'}
+            variant={ottoOpened ? 'light' : 'subtle'}
+            color={ottoOpened ? 'var(--accent)' : 'gray'}
             size="lg"
             onClick={toggleOtto}
             aria-label="Toggle Otto chat"
           >
-            <span style={{ fontSize: 16, lineHeight: 1 }}>🐾</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
           </ActionIcon>
         </Tooltip>
 
