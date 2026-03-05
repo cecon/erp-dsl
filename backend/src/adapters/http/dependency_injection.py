@@ -46,6 +46,7 @@ import src.application.agent.skills.delete_entity  # noqa: F401  — auto-regist
 import src.application.agent.skills.alter_page_schema  # noqa: F401  — auto-register
 import src.application.agent.skills.publish_page_version  # noqa: F401  — auto-register
 import src.application.agent.skills.rollback_page_version  # noqa: F401  — auto-register
+import src.application.agent.skills.get_entity_schema  # noqa: F401  — auto-register
 from src.infrastructure.security.jwt_auth_adapter import JWTAuthAdapter
 
 # ── Database engine & session ────────────────────────────────────────
