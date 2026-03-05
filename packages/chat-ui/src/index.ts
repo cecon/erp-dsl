@@ -22,7 +22,6 @@ export { useChatStore } from "./state/useChatStore";
 export { useAutoScroll } from "./hooks/useAutoScroll";
 export { useOttoStream } from "./hooks/useOttoStream";
 
-// Types
 export type {
   Message,
   MessageRole,
@@ -30,6 +29,12 @@ export type {
   TextContent,
   ImageContent,
   FileContent,
+  FormField,
+  InteractivePayload,
+  InteractiveType,
+  InteractiveOption,
+  InteractiveCarouselItem,
+  InteractiveImage,
   Agent,
   Workflow,
   Skill,

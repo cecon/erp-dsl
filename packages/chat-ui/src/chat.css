@@ -5,7 +5,7 @@
 /* ── Chat 3-column Layout ───────────────────────────────── */
 .chat-layout {
   display: flex;
-  height: 100vh;
+  height: 100%;
   background: #0f1219;
 }
 
@@ -15,7 +15,7 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  height: 100vh;
+  height: 100%;
   background: #0f1219;
   color: var(--text-primary);
 }
@@ -792,4 +792,236 @@
 
 [data-mantine-color-scheme="light"] .context-panel__list-item:hover {
   background: rgba(0, 0, 0, 0.02);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOOL / FORM / COMPONENT BUBBLES
+   ═══════════════════════════════════════════════════════════ */
+
+.chat-tool-bubble {
+  max-width: 85%;
+}
+
+.chat-tool-bubble__header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.12s ease;
+  color: var(--text-muted, #6b7280);
+}
+
+.chat-tool-bubble__header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.chat-tool-bubble__icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.6;
+}
+
+.chat-tool-bubble__label {
+  font-style: italic;
+}
+
+.chat-tool-bubble__chevron {
+  display: flex;
+  align-items: center;
+  opacity: 0.5;
+  transition: transform 0.2s ease;
+}
+
+.chat-tool-bubble__chevron--open {
+  transform: rotate(180deg);
+}
+
+.chat-tool-bubble__details {
+  padding: 8px 12px;
+  margin-top: 2px;
+  margin-left: 8px;
+  border-left: 2px solid var(--border-default, rgba(255, 255, 255, 0.06));
+  font-size: 11px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Keep old class for form-submitted which still uses it */
+.chat-bubble--tool {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  max-width: 85%;
+}
+
+.chat-bubble__tool-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-bubble__tool-icon {
+  font-size: 14px;
+}
+
+.chat-bubble--form,
+.chat-bubble--component {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.chat-bubble--form-submitted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  padding: 6px 10px;
+  max-width: 85%;
+}
+
+.chat-bubble--interactive {
+  padding: 8px 12px;
+  max-width: 90%;
+}
+
+/* ── Interactive messages ──────────────────────────────────── */
+
+.chat-interactive-confirm,
+.chat-interactive-choice,
+.chat-interactive-images,
+.chat-interactive-carousel {
+  padding: 4px 0;
+}
+
+.chat-interactive-choice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-interactive-dim {
+  opacity: 0.4;
+}
+
+.chat-interactive--answered {
+  opacity: 0.85;
+}
+
+.chat-interactive-image-card {
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.chat-interactive-image--selected {
+  border-color: var(--accent, #6366f1);
+}
+
+.chat-interactive-carousel-track {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.chat-interactive-carousel-card {
+  min-width: 160px;
+  max-width: 200px;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.chat-interactive-carousel--selected {
+  border-color: var(--accent, #6366f1);
+}
+
+/* ── Typing indicator ──────────────────────────────────────── */
+
+.chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+}
+
+.chat-typing__dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.chat-typing__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #6366f1);
+  opacity: 0.4;
+  animation: chat-bounce 1.4s ease-in-out infinite;
+}
+
+.chat-typing__dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.chat-typing__dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes chat-bounce {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.chat-typing__label {
+  font-size: 11px;
+  color: var(--text-muted, #6b7280);
+  font-style: italic;
+}
+
+/* ── Light mode for new elements ───────────────────────────── */
+
+[data-mantine-color-scheme="light"] .chat-tool-bubble__header:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-mantine-color-scheme="light"] .chat-tool-bubble__details {
+  border-left-color: #e5e7eb;
+}
+
+[data-mantine-color-scheme="light"] .chat-bubble--tool {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+[data-mantine-color-scheme="light"] .chat-bubble--form,
+[data-mantine-color-scheme="light"] .chat-bubble--component {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+[data-mantine-color-scheme="light"] .chat-bubble--form-submitted {
+  background: #f9fafb;
+  border-color: #e5e7eb;
 }

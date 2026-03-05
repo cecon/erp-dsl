@@ -64,6 +64,29 @@ def _list_all_components(components: list, prefix: str = "") -> list[dict]:
     return result
 
 
+# Aliases the LLM may use instead of the canonical key names.
+_CHANGES_ALIASES: dict[str, str] = {
+    "title": "update_title",
+    "subtitle": "update_description",
+    "description": "update_description",
+    "components": "update_components",
+}
+
+_VALID_CHANGE_KEYS = {
+    "update_title", "update_description", "update_components",
+    "add_fields", "remove_fields", "add_columns", "remove_columns",
+}
+
+
+def _normalize_changes(changes: dict) -> dict:
+    """Normalize alias keys to their canonical form."""
+    normalized: dict = {}
+    for key, value in changes.items():
+        canonical = _CHANGES_ALIASES.get(key, key)
+        normalized[canonical] = value
+    return normalized
+
+
 def _apply_changes(schema: dict, changes: dict) -> tuple[dict, list[str]]:
     """Apply requested changes to a schema copy.
 
@@ -79,6 +102,8 @@ def _apply_changes(schema: dict, changes: dict) -> tuple[dict, list[str]]:
     Returns:
         (modified_schema, list_of_change_descriptions)
     """
+    # Normalize aliases (e.g. "title" -> "update_title")
+    changes = _normalize_changes(changes)
     descriptions: list[str] = []
 
     # ── Title / Description ──────────────────────────────────────
@@ -215,7 +240,14 @@ async def alter_page_schema(params: dict, context: dict) -> dict:
     modified_schema, change_descriptions = _apply_changes(new_schema, changes)
 
     if not change_descriptions:
-        return {"error": "No valid changes were applied"}
+        received = list(changes.keys())
+        return {
+            "error": (
+                f"No valid changes were applied. "
+                f"Received keys: {received}. "
+                f"Valid keys: {sorted(_VALID_CHANGE_KEYS)}"
+            )
+        }
 
     # Get latest version number (including drafts)
     latest_num = (

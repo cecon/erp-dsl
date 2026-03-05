@@ -3,7 +3,8 @@ import { Badge, Group, ActionIcon, Tooltip, Text, rem } from '@mantine/core'
 import { Dropzone, type FileWithPath } from '@mantine/dropzone'
 import {
     IconRobot,
-    IconArrowLeft,
+    IconHistory,
+    IconPlus,
     IconUpload,
     IconX,
 } from '@tabler/icons-react'
@@ -20,7 +21,7 @@ import {
     type AttachmentFile,
 } from './ChatInput/AttachmentPreview'
 import { useChatStore } from './state/useChatStore'
-import type { Message, ImageContent, FileContent } from './types/chat'
+import type { Message, ImageContent, FileContent, FormField } from './types/chat'
 
 import './chat.css'
 
@@ -30,7 +31,6 @@ function generateId(): string {
 
 /**
  * Mock assistant response — used only when no `onSendMessage` callback is provided.
- * Useful for demos, previews, Storybook, etc.
  */
 function mockStreamResponse(
     messageId: string,
@@ -84,10 +84,6 @@ const ACCEPTED_TYPES = [
 /**
  * Callback invoked when the user sends a message.
  * The consumer should handle streaming and populate useChatStore directly.
- *
- * @param text - Plain text of the user message
- * @param history - Conversation history (role + content pairs)
- * @param assistantMessageId - Pre-created assistant message ID to stream into
  */
 export type OnSendMessageFn = (
     text: string,
@@ -96,23 +92,49 @@ export type OnSendMessageFn = (
 ) => void
 
 interface ChatPanelProps {
-    onNavigateBack?: () => void
+    /** Close the chat panel */
+    onClose?: () => void
+    /** Start new chat (reset) */
+    onNewChat?: () => void
     showContextPanel?: boolean
+    /** Title displayed in the header */
+    title?: string
+    /** Subtitle / context info */
+    subtitle?: string
     /**
-     * When provided, the ChatPanel delegates message sending to this callback
-     * instead of using the built-in mock response.
+     * When provided, the ChatPanel delegates message sending to this callback.
      * The consumer is responsible for streaming tokens into useChatStore.
      */
     onSendMessage?: OnSendMessageFn
-    /**
-     * Enable demo/preview mode with mock responses.
-     * When false (default) and onSendMessage is not provided,
-     * an error message is shown instead of a mock response.
-     */
+    /** Enable demo mode with mock responses */
     demo?: boolean
+    /** Callback for form submissions inside messages */
+    onFormSubmit?: (messageId: string, values: Record<string, unknown>) => void
+    /** Callback for interactive message responses */
+    onInteractiveRespond?: (messageId: string, value: string) => void
+    /** Render prop for custom components (e.g. ComponentRegistry) */
+    renderComponent?: (name: string, props: Record<string, unknown>) => React.ReactNode
+    /** Render prop for inline forms (e.g. DynamicForm) */
+    renderForm?: (
+        fields: FormField[],
+        initialValues: Record<string, unknown>,
+        onSubmit: (values: Record<string, unknown>) => void,
+    ) => React.ReactNode
 }
 
-export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMessage, demo = false }: ChatPanelProps) {
+export function ChatPanel({
+    onClose,
+    onNewChat,
+    showContextPanel = false,
+    title = 'Otto AI',
+    subtitle,
+    onSendMessage,
+    demo = false,
+    onFormSubmit,
+    onInteractiveRespond,
+    renderComponent,
+    renderForm,
+}: ChatPanelProps) {
     const dropzoneRef = useRef<() => void>(null)
     const [attachments, setAttachments] = useState<AttachmentFile[]>([])
     const [isDragging, setIsDragging] = useState(false)
@@ -140,9 +162,6 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
         })
     }, [])
 
-    /**
-     * Extract plain text from Message content array.
-     */
     const extractText = useCallback((message: Message): string => {
         return message.content
             .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
@@ -151,9 +170,6 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
             .trim()
     }, [])
 
-    /**
-     * Build conversation history from current store messages.
-     */
     const buildHistory = useCallback((): Array<{ role: string; content: string }> => {
         return useChatStore.getState().messages
             .filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -198,7 +214,6 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
                     content: [...userMessage.content, ...extraContent],
                 }
 
-                // Clean up preview URLs
                 attachments.forEach((att) => {
                     if (att.previewUrl) URL.revokeObjectURL(att.previewUrl)
                 })
@@ -222,24 +237,21 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
             setStreaming(true)
 
             if (onSendMessage) {
-                // Delegate to consumer — they handle streaming via useChatStore
                 const text = extractText(userMessage)
                 const history = buildHistory()
                 onSendMessage(text, history, assistantId)
             } else if (demo) {
-                // Demo mode: mock response
                 mockStreamResponse(assistantId, appendStreamToken, updateMessage, setStreaming)
             } else {
-                // Production: show error — onSendMessage is required
-                console.error('[ChatPanel] onSendMessage não foi fornecido. O chat não está conectado ao backend.')
+                console.error('[ChatPanel] onSendMessage não foi fornecido.')
                 updateMessage(assistantId, {
-                    content: [{ type: 'text', text: '⚠️ **Erro:** O chat não está conectado ao servidor. Verifique a configuração do componente.' }],
+                    content: [{ type: 'text', text: '⚠️ **Erro:** O chat não está conectado ao servidor.' }],
                     isStreaming: false,
                 })
                 setStreaming(false)
             }
         },
-        [addMessage, appendStreamToken, updateMessage, setStreaming, attachments, onSendMessage, extractText, buildHistory]
+        [addMessage, appendStreamToken, updateMessage, setStreaming, attachments, onSendMessage, extractText, buildHistory, demo]
     )
 
     const handleStop = useCallback(() => {
@@ -273,7 +285,6 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
             setStreaming(true)
 
             if (onSendMessage) {
-                // Find the last user message to regenerate from
                 const lastUserMsg = messages
                     .slice(0, msgIndex)
                     .reverse()
@@ -288,15 +299,14 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
             } else if (demo) {
                 mockStreamResponse(newAssistantId, appendStreamToken, updateMessage, setStreaming)
             } else {
-                console.error('[ChatPanel] onSendMessage não foi fornecido. O chat não está conectado ao backend.')
                 updateMessage(newAssistantId, {
-                    content: [{ type: 'text', text: '⚠️ **Erro:** O chat não está conectado ao servidor. Verifique a configuração do componente.' }],
+                    content: [{ type: 'text', text: '⚠️ **Erro:** O chat não está conectado ao servidor.' }],
                     isStreaming: false,
                 })
                 setStreaming(false)
             }
         },
-        [addMessage, appendStreamToken, updateMessage, setStreaming, onSendMessage, buildHistory]
+        [addMessage, appendStreamToken, updateMessage, setStreaming, onSendMessage, buildHistory, demo]
     )
 
     const handleAttachClick = useCallback(() => {
@@ -313,21 +323,11 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
                 {/* Header */}
                 <div className="chat-header">
                     <div className="chat-header__left">
-                        <Tooltip label="Voltar" withArrow>
-                            <ActionIcon
-                                variant="subtle"
-                                color="gray"
-                                size="md"
-                                onClick={onNavigateBack}
-                            >
-                                <IconArrowLeft size={18} />
-                            </ActionIcon>
-                        </Tooltip>
                         <div className="chat-header__avatar">
                             <IconRobot size={18} />
                         </div>
                         <div className="chat-header__info">
-                            <span className="chat-header__title">Otto AI</span>
+                            <span className="chat-header__title">{title}</span>
                             <span className="chat-header__status">
                                 {isStreaming ? (
                                     <>
@@ -335,7 +335,7 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
                                         Gerando resposta...
                                     </>
                                 ) : (
-                                    'Pronto para ajudar'
+                                    subtitle || 'Pronto para ajudar'
                                 )}
                             </span>
                         </div>
@@ -344,6 +344,25 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
                         <Badge variant="dot" color="green" size="sm">
                             Gemini
                         </Badge>
+                        <Tooltip label="Histórico" withArrow position="bottom">
+                            <ActionIcon variant="subtle" color="gray" size="sm">
+                                <IconHistory size={16} />
+                            </ActionIcon>
+                        </Tooltip>
+                        {onNewChat && (
+                            <Tooltip label="Nova conversa" withArrow position="bottom">
+                                <ActionIcon variant="subtle" color="gray" size="sm" onClick={onNewChat}>
+                                    <IconPlus size={16} />
+                                </ActionIcon>
+                            </Tooltip>
+                        )}
+                        {onClose && (
+                            <Tooltip label="Fechar" withArrow position="bottom">
+                                <ActionIcon variant="subtle" color="gray" size="sm" onClick={onClose}>
+                                    <IconX size={16} />
+                                </ActionIcon>
+                            </Tooltip>
+                        )}
                     </Group>
                 </div>
 
@@ -391,7 +410,13 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMess
                 </Dropzone.FullScreen>
 
                 {/* Messages */}
-                <MessageList onRegenerate={handleRegenerate} />
+                <MessageList
+                    onRegenerate={handleRegenerate}
+                    onFormSubmit={onFormSubmit}
+                    onInteractiveRespond={onInteractiveRespond}
+                    renderComponent={renderComponent}
+                    renderForm={renderForm}
+                />
 
                 {/* Input area */}
                 <div>

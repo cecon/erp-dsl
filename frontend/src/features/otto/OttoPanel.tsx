@@ -11,6 +11,7 @@ import { ChatInput } from '@erp-dsl/chat-ui';
 import {
   IconRobot,
   IconPlus,
+  IconHistory,
   IconX,
 } from '@tabler/icons-react';
 import { OttoMessage } from './OttoMessage';
@@ -65,13 +66,16 @@ export function OttoPanel() {
         </div>
         <div className="copilot-header__right">
           <Badge variant="dot" color="green" size="xs">Gemini</Badge>
-          {messages.length > 0 && (
-            <Tooltip label="Nova conversa" withArrow position="bottom">
-              <ActionIcon variant="subtle" color="gray" size="xs" onClick={reset}>
-                <IconPlus size={14} />
-              </ActionIcon>
-            </Tooltip>
-          )}
+          <Tooltip label="Histórico" withArrow position="bottom">
+            <ActionIcon variant="subtle" color="gray" size="xs">
+              <IconHistory size={14} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Nova conversa" withArrow position="bottom">
+            <ActionIcon variant="subtle" color="gray" size="xs" onClick={reset}>
+              <IconPlus size={14} />
+            </ActionIcon>
+          </Tooltip>
           <Tooltip label="Fechar" withArrow position="bottom">
             <ActionIcon variant="subtle" color="gray" size="xs" onClick={close}>
               <IconX size={14} />

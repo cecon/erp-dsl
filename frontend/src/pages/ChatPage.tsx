@@ -7,5 +7,5 @@ import { useNavigate } from 'react-router-dom'
 
 export function ChatPage() {
     const navigate = useNavigate()
-    return <ChatPanel onNavigateBack={() => navigate('/')} />
+    return <ChatPanel onClose={() => navigate('/')} demo />
 }

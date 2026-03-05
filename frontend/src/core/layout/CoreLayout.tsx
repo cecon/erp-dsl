@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Header } from '../../components/layout/Header';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { ThemeDrawer } from '../../components/layout/ThemeDrawer';
-import { OttoPanel } from '../../features/otto/OttoPanel';
+import { OttoChat } from '../../features/otto/OttoChat';
 import { useOttoContext } from '../../features/otto';
 import { useThemeStore } from '../../state/themeStore';
 
@@ -161,7 +161,7 @@ export function CoreLayout({ children }: CoreLayoutProps) {
               }
             }}
           />
-          <OttoPanel />
+          <OttoChat />
         </AppShell.Aside>
       )}
 

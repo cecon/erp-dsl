@@ -138,8 +138,22 @@ export function useOtto(): UseOttoReturn {
         for (const part of parts) {
           const events = parseSSELines(part);
           for (const data of events) {
+            // Helper: finalize the current assistant message (stop cursor)
+            const finalizeCurrentAssistant = () => {
+              if (currentAssistantId) {
+                const idToFinalize = currentAssistantId;
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === idToFinalize ? { ...m, streaming: false } : m
+                  )
+                );
+                currentAssistantId = null;
+              }
+            };
+
             // ── Interactive ──────────────────────────────────
             if (data.role === 'interactive') {
+              finalizeCurrentAssistant();
               const payload: InteractivePayload = {
                 type: data.type as InteractivePayload['type'],
                 sessionId: data.session_id as string,
@@ -166,6 +180,7 @@ export function useOtto(): UseOttoReturn {
 
             // ── Form ────────────────────────────────────────
             if (data.role === 'form') {
+              finalizeCurrentAssistant();
               const formMsg: OttoMessage = {
                 id: nextId(),
                 role: 'form',
@@ -181,6 +196,7 @@ export function useOtto(): UseOttoReturn {
 
             // ── Component ────────────────────────────────────
             if (data.role === 'component') {
+              finalizeCurrentAssistant();
               const compMsg: OttoMessage = {
                 id: nextId(),
                 role: 'component',
@@ -199,6 +215,7 @@ export function useOtto(): UseOttoReturn {
 
             // ── Tool ────────────────────────────────────────
             if (data.role === 'tool') {
+              finalizeCurrentAssistant();
               const toolMsg: OttoMessage = {
                 id: nextId(),
                 role: 'tool',
@@ -208,7 +225,6 @@ export function useOtto(): UseOttoReturn {
                 toolResult: data.tool_result,
               };
               setMessages((prev) => [...prev, toolMsg]);
-              currentAssistantId = null;
               continue;
             }
 
@@ -224,6 +240,7 @@ export function useOtto(): UseOttoReturn {
 
             // ── System ──────────────────────────────────────
             if (data.role === 'system') {
+              finalizeCurrentAssistant();
               const sysMsg: OttoMessage = {
                 id: nextId(),
                 role: 'system',
@@ -296,7 +313,16 @@ export function useOtto(): UseOttoReturn {
         }
       }
 
-      // Stream ended without explicit done
+      // Stream ended without explicit done — finalize any lingering assistant
+      if (currentAssistantId) {
+        const idToFinalize = currentAssistantId;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === idToFinalize ? { ...m, streaming: false } : m
+          )
+        );
+        currentAssistantId = null;
+      }
       setStatus('done');
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
