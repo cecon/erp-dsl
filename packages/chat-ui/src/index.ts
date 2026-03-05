@@ -1,5 +1,6 @@
 // Components
 export { ChatPanel } from "./ChatPanel";
+export type { OnSendMessageFn } from "./ChatPanel";
 export { ChatToolbar } from "./ChatToolbar";
 export { ContextPanel } from "./ContextPanel";
 export { SessionSidebar } from "./SessionSidebar";

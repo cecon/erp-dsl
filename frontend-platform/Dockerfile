@@ -22,3 +22,4 @@ FROM nginx:alpine
 COPY --from=build /app/frontend-platform/dist /usr/share/nginx/html
 COPY frontend-platform/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 5175
+CMD ["nginx", "-g", "daemon off;"]

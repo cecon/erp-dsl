@@ -29,8 +29,8 @@ function generateId(): string {
 }
 
 /**
- * Mock assistant response for demo purposes.
- * In production, this would be replaced by the SSE streaming hook.
+ * Mock assistant response — used only when no `onSendMessage` callback is provided.
+ * Useful for demos, previews, Storybook, etc.
  */
 function mockStreamResponse(
     messageId: string,
@@ -48,22 +48,7 @@ Posso ajudar você com diversas tarefas do ERP:
 2. **Executar workflows** — Rodar processos automatizados como fechamento de caixa
 3. **Gerar relatórios** — Criar análises e dashboards personalizados
 
-#### Exemplo de código:
-
-\`\`\`typescript
-const response = await otto.ask({
-  question: "Qual o faturamento de hoje?",
-  context: { tenant: "loja-01" }
-});
-\`\`\`
-
 > 💡 **Dica:** Use \`@\` para mencionar agentes, \`/\` para workflows e \`\${}\` para skills.
-
-| Recurso | Status |
-|---------|--------|
-| Chat | ✅ Ativo |
-| Streaming | ✅ Ativo |
-| Workflows | 🔜 Em breve |
 
 Como posso ajudar? 🚀`
 
@@ -96,12 +81,38 @@ const ACCEPTED_TYPES = [
     'application/json',
 ]
 
+/**
+ * Callback invoked when the user sends a message.
+ * The consumer should handle streaming and populate useChatStore directly.
+ *
+ * @param text - Plain text of the user message
+ * @param history - Conversation history (role + content pairs)
+ * @param assistantMessageId - Pre-created assistant message ID to stream into
+ */
+export type OnSendMessageFn = (
+    text: string,
+    history: Array<{ role: string; content: string }>,
+    assistantMessageId: string,
+) => void
+
 interface ChatPanelProps {
     onNavigateBack?: () => void
     showContextPanel?: boolean
+    /**
+     * When provided, the ChatPanel delegates message sending to this callback
+     * instead of using the built-in mock response.
+     * The consumer is responsible for streaming tokens into useChatStore.
+     */
+    onSendMessage?: OnSendMessageFn
+    /**
+     * Enable demo/preview mode with mock responses.
+     * When false (default) and onSendMessage is not provided,
+     * an error message is shown instead of a mock response.
+     */
+    demo?: boolean
 }
 
-export function ChatPanel({ onNavigateBack, showContextPanel = false }: ChatPanelProps) {
+export function ChatPanel({ onNavigateBack, showContextPanel = false, onSendMessage, demo = false }: ChatPanelProps) {
     const dropzoneRef = useRef<() => void>(null)
     const [attachments, setAttachments] = useState<AttachmentFile[]>([])
     const [isDragging, setIsDragging] = useState(false)
@@ -127,6 +138,33 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false }: ChatPane
             if (att?.previewUrl) URL.revokeObjectURL(att.previewUrl)
             return prev.filter((a) => a.id !== id)
         })
+    }, [])
+
+    /**
+     * Extract plain text from Message content array.
+     */
+    const extractText = useCallback((message: Message): string => {
+        return message.content
+            .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+            .map((c) => c.text)
+            .join('\n')
+            .trim()
+    }, [])
+
+    /**
+     * Build conversation history from current store messages.
+     */
+    const buildHistory = useCallback((): Array<{ role: string; content: string }> => {
+        return useChatStore.getState().messages
+            .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .map((m) => ({
+                role: m.role,
+                content: m.content
+                    .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+                    .map((c) => c.text)
+                    .join('\n'),
+            }))
+            .filter((m) => m.content.trim().length > 0)
     }, [])
 
     const handleSend = useCallback(
@@ -183,10 +221,25 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false }: ChatPane
             addMessage(assistantMsg)
             setStreaming(true)
 
-            // Mock streaming (replace with useOttoStream in production)
-            mockStreamResponse(assistantId, appendStreamToken, updateMessage, setStreaming)
+            if (onSendMessage) {
+                // Delegate to consumer — they handle streaming via useChatStore
+                const text = extractText(userMessage)
+                const history = buildHistory()
+                onSendMessage(text, history, assistantId)
+            } else if (demo) {
+                // Demo mode: mock response
+                mockStreamResponse(assistantId, appendStreamToken, updateMessage, setStreaming)
+            } else {
+                // Production: show error — onSendMessage is required
+                console.error('[ChatPanel] onSendMessage não foi fornecido. O chat não está conectado ao backend.')
+                updateMessage(assistantId, {
+                    content: [{ type: 'text', text: '⚠️ **Erro:** O chat não está conectado ao servidor. Verifique a configuração do componente.' }],
+                    isStreaming: false,
+                })
+                setStreaming(false)
+            }
         },
-        [addMessage, appendStreamToken, updateMessage, setStreaming, attachments]
+        [addMessage, appendStreamToken, updateMessage, setStreaming, attachments, onSendMessage, extractText, buildHistory]
     )
 
     const handleStop = useCallback(() => {
@@ -218,9 +271,32 @@ export function ChatPanel({ onNavigateBack, showContextPanel = false }: ChatPane
 
             addMessage(newAssistantMsg)
             setStreaming(true)
-            mockStreamResponse(newAssistantId, appendStreamToken, updateMessage, setStreaming)
+
+            if (onSendMessage) {
+                // Find the last user message to regenerate from
+                const lastUserMsg = messages
+                    .slice(0, msgIndex)
+                    .reverse()
+                    .find((m) => m.role === 'user')
+                const text = lastUserMsg ? lastUserMsg.content
+                    .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+                    .map((c) => c.text)
+                    .join('\n')
+                    .trim() : ''
+                const history = buildHistory()
+                onSendMessage(text, history, newAssistantId)
+            } else if (demo) {
+                mockStreamResponse(newAssistantId, appendStreamToken, updateMessage, setStreaming)
+            } else {
+                console.error('[ChatPanel] onSendMessage não foi fornecido. O chat não está conectado ao backend.')
+                updateMessage(newAssistantId, {
+                    content: [{ type: 'text', text: '⚠️ **Erro:** O chat não está conectado ao servidor. Verifique a configuração do componente.' }],
+                    isStreaming: false,
+                })
+                setStreaming(false)
+            }
         },
-        [addMessage, appendStreamToken, updateMessage, setStreaming]
+        [addMessage, appendStreamToken, updateMessage, setStreaming, onSendMessage, buildHistory]
     )
 
     const handleAttachClick = useCallback(() => {

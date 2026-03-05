@@ -111,6 +111,16 @@ export function OttoPanel() {
                 onInteractiveRespond={respondInteractive}
               />
             ))}
+            {status === 'streaming' && (
+              <div className="copilot-typing">
+                <div className="copilot-typing__dots">
+                  <span className="copilot-typing__dot" />
+                  <span className="copilot-typing__dot" />
+                  <span className="copilot-typing__dot" />
+                </div>
+                <span className="copilot-typing__label">Otto está pensando…</span>
+              </div>
+            )}
           </div>
         )}
       </ScrollArea>

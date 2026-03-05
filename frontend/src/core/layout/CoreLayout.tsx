@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Header } from '../../components/layout/Header';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { ThemeDrawer } from '../../components/layout/ThemeDrawer';
-import { ChatPanel } from '@erp-dsl/chat-ui';
+import { OttoPanel } from '../../features/otto/OttoPanel';
 import { useOttoContext } from '../../features/otto';
 import { useThemeStore } from '../../state/themeStore';
 
@@ -162,7 +162,7 @@ export function CoreLayout({ children }: CoreLayoutProps) {
             }
           }}
         />
-        <ChatPanel onNavigateBack={closeOtto} />
+        <OttoPanel />
       </Drawer>
 
       <ThemeDrawer />

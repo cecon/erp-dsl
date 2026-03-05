@@ -9,6 +9,6 @@ COPY . .
 
 ENV PYTHONPATH=/app
 
-EXPOSE 8000
+EXPOSE 8013
 
 CMD ["python", "start.py"]
