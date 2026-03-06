@@ -11,6 +11,11 @@
   },
   "dependencies": {
     "@erp-dsl/chat-ui": "workspace:*",
+    "@erp-dsl/engine": "workspace:*",
+    "@erp-dsl/form-ui": "workspace:*",
+    "@erp-dsl/grid-ui": "workspace:*",
+    "@erp-dsl/icons": "workspace:*",
+    "@erp-dsl/widgets": "workspace:*",
     "@mantine/code-highlight": "^7.17.8",
     "@mantine/core": "^7.17.8",
     "@mantine/dropzone": "^7.17.8",

@@ -20,7 +20,7 @@ import {
   Stack,
   Text,
 } from '@mantine/core';
-import { DynamicForm } from '../../core/engine/DynamicForm';
+import { DynamicForm } from '@erp-dsl/engine';
 import { getComponent } from '../../core/engine/ComponentRegistry';
 import { MarkdownRenderer } from '@erp-dsl/chat-ui';
 import type { OttoMessage as OttoMessageType } from './types';

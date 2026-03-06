@@ -11,31 +11,19 @@ import {
   ColorSwatchPicker,
   ThemeSwitch,
   SegmentedField,
-} from '../../components/form';
+} from '@erp-dsl/form-ui';
 import { ProductEnrichModal } from '../../features/agent/ProductEnrichModal';
 import { WorkflowStepEditorField } from '../../features/workflows';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export interface FieldComponentProps {
-  label?: string;
-  placeholder?: string;
-  value?: any;
-  onChange?: (value: any) => void;
-  options?: { value: string; label: string }[];
-  [key: string]: any;
-}
-
 /**
- * Registry mapping DSL type strings to encapsulated field components.
+ * ERP-specific component registry.
  *
- * Each component is self-contained — all formatting, masks, and
- * locale defaults live INSIDE the component, not here.
+ * Combines shared form components from @erp-dsl/form-ui
+ * with project-specific components (agent modals, workflow editors).
  *
- * To add a new field type:
- * 1. Create a component in src/components/form/
- * 2. Export it from src/components/form/index.ts
- * 3. Register it here with a DSL type key
+ * Passed to EngineProvider so the engine can resolve field types.
  */
 export const componentRegistry: Record<string, ComponentType<any>> = {
   text: TextField,
