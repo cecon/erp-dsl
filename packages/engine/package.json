@@ -1,5 +1,5 @@
 {
-  "name": "@erp-dsl/widgets",
+  "name": "@erp-dsl/engine",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -9,9 +9,11 @@
     ".": "./src/index.ts"
   },
   "peerDependencies": {
-    "@erp-dsl/icons": "workspace:*",
+    "@erp-dsl/grid-ui": "workspace:*",
     "@mantine/core": "^7.17.8",
+    "@mantine/form": "^7.17.8",
     "@mantine/hooks": "^7.17.8",
+    "@tanstack/react-query": "^5.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1"
