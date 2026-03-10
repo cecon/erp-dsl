@@ -8,6 +8,7 @@ venv/
 .venv/
 *.db
 *.sqlite3
+.cappy/whatsapp-auth/
 
 # Node
 node_modules/
