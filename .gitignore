@@ -9,6 +9,7 @@ venv/
 *.db
 *.sqlite3
 .cappy/whatsapp-auth/
+.cappy/whatsapp-inbox/
 
 # Node
 node_modules/
