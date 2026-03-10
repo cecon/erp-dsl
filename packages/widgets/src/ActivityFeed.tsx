@@ -1,4 +1,4 @@
-import { getIcon } from '../Icons';
+import { getIcon } from '@erp-dsl/icons';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

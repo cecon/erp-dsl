@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../services/api';
 import { useThemeStore } from '../../state/themeStore';
-import { getIcon } from '../Icons';
+import { getIcon } from '@erp-dsl/icons';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

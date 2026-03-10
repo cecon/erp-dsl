@@ -1,6 +1,7 @@
 import { Alert, Button, Divider, Group, SimpleGrid, Stack, Tabs, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useEffect, useRef } from 'react';
+import { useEngine } from './EngineProvider';
 import { getComponent } from './ComponentRegistry';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -108,6 +109,8 @@ function evalFormula(formula: string, values: Record<string, any>): string {
  *
  * Container children are treated as first-level form values (flattened),
  * NOT nested under a container key.
+ *
+ * Uses the componentRegistry from EngineProvider to resolve field components.
  */
 export function DynamicForm({
   fields,
@@ -116,6 +119,7 @@ export function DynamicForm({
   onCancel,
   submitLabel = 'Save',
 }: DynamicFormProps) {
+  const { componentRegistry } = useEngine();
   const form = useForm({
     initialValues: flattenFieldIds(fields, initialValues),
   });
@@ -206,8 +210,8 @@ export function DynamicForm({
       );
     }
 
-    // Regular field
-    const Component = getComponent(field.type);
+    // Regular field — resolve from injected registry
+    const Component = getComponent(componentRegistry, field.type);
     if (!Component) {
       return (
         <Alert

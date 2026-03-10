@@ -1,49 +1,33 @@
 import { Loader, Stack, Text } from '@mantine/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ComponentType } from 'react';
-import { ActivityFeed } from '../../components/dashboard/ActivityFeed';
-import { QuickActions } from '../../components/dashboard/QuickActions';
-import { StatsGrid } from '../../components/dashboard/StatCard';
-import { useOttoContext } from '../../features/otto';
-import api from '../../services/api';
+import { useEngine } from './EngineProvider';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-/**
- * Dashboard widget registry.
- *
- * Maps DSL component type strings to widget components.
- * To add a new widget type, register it here.
- */
-const dashboardRegistry: Record<string, ComponentType<any>> = {
-  stats_grid: StatsGrid,
-  activity_feed: ActivityFeed,
-  quick_actions: QuickActions,
-};
 
 /**
  * Renders the dashboard page from a DSL schema.
  *
  * Fetches the 'dashboard' page schema and maps each component
- * to the corresponding widget via the dashboardRegistry.
+ * to the corresponding widget via the widgetRegistry from EngineProvider.
  * No hardcoded data or switch/case — everything is schema + registry.
  */
 export function DashboardRenderer() {
-  const { setContext: setOttoContext } = useOttoContext();
+  const { apiClient, onPageContext, widgetRegistry = {} } = useEngine();
   const queryClient = useQueryClient();
 
-  // Sync Otto context when navigating to dashboard
+  // Sync page context when navigating to dashboard
   useEffect(() => {
-    setOttoContext({
+    onPageContext?.({
       pageKey: 'dashboard',
       pageTitle: 'Dashboard',
       entityEndpoint: null,
       pageSchema: null,
       viewMode: 'dashboard',
     });
-  }, [setOttoContext]);
+  }, [onPageContext]);
 
-  // Listen for Otto schema refresh events (after publish/rollback)
+  // Listen for schema refresh events (after publish/rollback)
   useEffect(() => {
     const handler = () => {
       queryClient.invalidateQueries({ queryKey: ['page', 'dashboard'] });
@@ -54,7 +38,7 @@ export function DashboardRenderer() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['page', 'dashboard'],
-    queryFn: () => api.get('/pages/dashboard').then((r) => r.data),
+    queryFn: () => apiClient.get('/pages/dashboard').then((r) => r.data),
   });
 
   if (isLoading) {
@@ -87,7 +71,7 @@ export function DashboardRenderer() {
       </div>
 
       {components.map((comp: any) => {
-        const Component = dashboardRegistry[comp.type];
+        const Component: ComponentType<any> | undefined = widgetRegistry[comp.type];
         if (!Component) {
           return (
             <Text key={comp.id} c="red" size="sm">

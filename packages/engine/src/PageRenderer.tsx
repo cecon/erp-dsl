@@ -2,11 +2,11 @@ import { Alert, Button, Group, Loader, Modal, Stack, Text } from '@mantine/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { DynamicMrtGrid } from '../../components/grid/DynamicMrtGrid';
-import { useOttoContext } from '../../features/otto';
-import api from '../../services/api';
-import { componentRegistry } from './ComponentRegistry';
+import { DynamicMrtGrid } from '@erp-dsl/grid-ui';
+import { useEngine } from './EngineProvider';
+import { getComponent } from './ComponentRegistry';
 import { DynamicForm } from './DynamicForm';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface SchemaAction {
@@ -44,10 +44,16 @@ interface PageSchema {
  * Renders any entity page purely from the DSL schema.
  * The component has ZERO knowledge of specific entities —
  * endpoints, labels, and field definitions all come from the schema.
+ *
+ * Dependencies are injected via EngineProvider:
+ * - apiClient: for data fetching and mutations
+ * - onPageContext: optional callback for AI assistants, breadcrumbs, etc.
+ * - componentRegistry: for resolving agent modals and custom components
  */
 export function PageRenderer() {
   const { pageKey } = useParams<{ pageKey: string }>();
   const queryClient = useQueryClient();
+  const { apiClient, onPageContext, componentRegistry } = useEngine();
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -59,7 +65,7 @@ export function PageRenderer() {
 
   const { data: pageData, isLoading: pageLoading } = useQuery<PageSchema>({
     queryKey: ['page', pageKey],
-    queryFn: () => api.get(`/pages/${pageKey}`).then((r) => r.data),
+    queryFn: () => apiClient.get(`/pages/${pageKey}`).then((r) => r.data),
     enabled: !!pageKey,
   });
 
@@ -67,34 +73,33 @@ export function PageRenderer() {
   const dataSource = schema?.dataSource;
   const endpoint = dataSource?.endpoint ?? `/${pageKey}`;
 
-  /* ── Sync Otto context with current page ─────────────────── */
-  const { setContext: setOttoContext } = useOttoContext();
+  /* ── Sync page context ──────────────────────────────────────── */
 
   // Immediately update pageKey on navigation (even before schema loads)
   useEffect(() => {
-    setOttoContext({
+    onPageContext?.({
       pageKey: pageKey ?? null,
       pageTitle: null,
       entityEndpoint: null,
       pageSchema: null,
       viewMode: null,
     });
-  }, [pageKey, setOttoContext]);
+  }, [pageKey, onPageContext]);
 
   // Enrich context once schema is loaded
   useEffect(() => {
     if (!schema) return;
     const isFormLayout = schema.layout === 'form';
-    setOttoContext({
+    onPageContext?.({
       pageKey: pageKey ?? null,
       pageTitle: schema.title ?? pageKey ?? null,
       entityEndpoint: endpoint ?? null,
       pageSchema: schema,
       viewMode: isFormLayout ? 'form' : 'grid',
     });
-  }, [pageKey, schema, endpoint, setOttoContext]);
+  }, [pageKey, schema, endpoint, onPageContext]);
 
-  // Listen for Otto schema refresh events (after publish/rollback)
+  // Listen for schema refresh events (after publish/rollback)
   useEffect(() => {
     const handler = () => {
       queryClient.invalidateQueries({ queryKey: ['page', pageKey] });
@@ -118,7 +123,7 @@ export function PageRenderer() {
   const { data: gridData, isLoading: dataLoading } = useQuery({
     queryKey: [pageKey, page],
     queryFn: () =>
-      api
+      apiClient
         .get(endpoint, {
           params: { offset: (page - 1) * pageSize, limit: pageSize },
         })
@@ -129,7 +134,7 @@ export function PageRenderer() {
   /* ── Mutations (all use the same dynamic endpoint) ──────────── */
 
   const createMutation = useMutation({
-    mutationFn: (values: any) => api.post(endpoint, values),
+    mutationFn: (values: any) => apiClient.post(endpoint, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [pageKey] });
       setFormOpen(false);
@@ -138,7 +143,7 @@ export function PageRenderer() {
 
   const updateMutation = useMutation({
     mutationFn: (values: any) =>
-      api.put(`${endpoint}/${values.id}`, values),
+      apiClient.put(`${endpoint}/${values.id}`, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [pageKey] });
       setFormOpen(false);
@@ -147,7 +152,7 @@ export function PageRenderer() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`${endpoint}/${id}`),
+    mutationFn: (id: string) => apiClient.delete(`${endpoint}/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [pageKey] });
     },
@@ -158,8 +163,6 @@ export function PageRenderer() {
   const handleEdit = useCallback(
     (row: any) => {
       if (editAction?.navigateTo) {
-        // e.g. navigateTo: '/pages/fiscal_rules_form'
-        // We append ?id=123 so the form page knows what to load
         window.location.href = `${editAction.navigateTo}?id=${row.id}`;
       } else {
         setEditingItem(row);
@@ -196,7 +199,7 @@ export function PageRenderer() {
   /* ── Fetch single item if in form layout and edit mode ──────── */
   const { data: singleItemData, isLoading: singleItemLoading } = useQuery({
     queryKey: [pageKey, 'item', editId],
-    queryFn: () => api.get(`${endpoint}/${editId}`).then((r) => r.data),
+    queryFn: () => apiClient.get(`${endpoint}/${editId}`).then((r) => r.data),
     enabled: !!editId && schema?.layout === 'form',
   });
 
@@ -355,7 +358,7 @@ export function PageRenderer() {
 
       {/* Agent Modal (dynamic from ComponentRegistry) */}
       {agentKey && (() => {
-        const AgentComponent = componentRegistry[`agent:${agentKey}`];
+        const AgentComponent = getComponent(componentRegistry, `agent:${agentKey}`);
         if (!AgentComponent) return null;
         return (
           <AgentComponent

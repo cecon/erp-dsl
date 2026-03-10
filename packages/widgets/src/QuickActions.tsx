@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { getIcon } from '../Icons';
+import { getIcon } from '@erp-dsl/icons';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

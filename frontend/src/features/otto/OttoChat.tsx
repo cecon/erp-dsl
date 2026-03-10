@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { ChatPanel, useChatStore } from '@erp-dsl/chat-ui';
 import type { Message, FormField } from '@erp-dsl/chat-ui';
 import { useOttoContext } from './OttoProvider';
-import { DynamicForm } from '../../core/engine/DynamicForm';
+import { DynamicForm } from '@erp-dsl/engine';
 import { getComponent } from '../../core/engine/ComponentRegistry';
 import type { OttoMessage } from './types';
 
