@@ -17,40 +17,54 @@ _ALLOWED_TOP_KEYS = {
     "filters", "defaultValues", "validations", "metadata", "dataSource",
 }
 
-# Whitelisted component types
+# Whitelisted component types — all DSL node types across all schemas
 _ALLOWED_COMPONENT_TYPES = {
-    "text", "number", "money", "select", "checkbox", "date",
-    "textarea", "grid", "form", "section", "heading", "divider",
-    "button", "hidden",
+    # ── Inputs ────────────────────────────────────────────────────
+    "text", "number", "money", "select", "checkbox", "date", "datetime",
+    "textarea", "hidden", "color_swatch_picker", "theme_switch", "segmented",
+    "workflow_step_editor",
+    # ── Layout ────────────────────────────────────────────────────
+    "form", "grid", "section", "tabs", "tab", "heading", "divider",
+    # ── Actions ───────────────────────────────────────────────────
+    "button", "submit", "cancel",
+    # ── Dashboard widgets ─────────────────────────────────────────
+    "stats_grid", "stat_card", "activity_feed", "quick_actions",
+    # ── Agent / special ───────────────────────────────────────────
+    "agent",
 }
 
-# Keys that could indicate code execution attempts
-_FORBIDDEN_PATTERNS = {
-    "eval", "exec", "import", "__", "function", "script",
-    "onclick", "onload", "onerror", "javascript:",
-}
+# Precise patterns for actual code injection — avoids false positives
+# like "description" matching "script" or "import" matching field names.
+import re as _re
+
+_FORBIDDEN_REGEXES = [
+    _re.compile(r"<script", _re.IGNORECASE),
+    _re.compile(r"javascript\s*:", _re.IGNORECASE),
+    _re.compile(r"\beval\s*\("),
+    _re.compile(r"\bexec\s*\("),
+    _re.compile(r"__[a-z]+__"),
+    _re.compile(r"\bon(click|load|error|mouseover|submit|focus|blur)\b", _re.IGNORECASE),
+]
 
 
 def _validate_no_code_injection(obj: Any, path: str = "$") -> None:
     """Recursively check that no value contains code-injection patterns."""
     if isinstance(obj, dict):
         for key, value in obj.items():
-            lower_key = key.lower()
-            for forbidden in _FORBIDDEN_PATTERNS:
-                if forbidden in lower_key:
+            for pattern in _FORBIDDEN_REGEXES:
+                if pattern.search(str(key)):
                     raise ValueError(
-                        f"Forbidden key '{key}' at {path}.{key}"
+                        f"Forbidden key pattern at {path}.{key}"
                     )
             _validate_no_code_injection(value, f"{path}.{key}")
     elif isinstance(obj, list):
         for i, item in enumerate(obj):
             _validate_no_code_injection(item, f"{path}[{i}]")
     elif isinstance(obj, str):
-        lower_val = obj.lower()
-        for forbidden in _FORBIDDEN_PATTERNS:
-            if forbidden in lower_val:
+        for pattern in _FORBIDDEN_REGEXES:
+            if pattern.search(obj):
                 raise ValueError(
-                    f"Forbidden value pattern '{forbidden}' at {path}"
+                    f"Forbidden value pattern at {path}: {obj[:60]!r}"
                 )
 
 
