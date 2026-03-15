@@ -1,4 +1,4 @@
-import { createContext, useContext, type ComponentType, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ComponentType, type ReactNode } from 'react';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -43,13 +43,24 @@ const EngineContext = createContext<EngineConfig | null>(null);
  *
  * Wrap your app (or a subtree) with this provider and pass in
  * your project-specific apiClient, registries, and callbacks.
+ *
+ * The context value is memoized to avoid unnecessary re-renders
+ * of all engine consumers (PageRenderer, DashboardRenderer, etc.).
  */
 export function EngineProvider({
   children,
-  ...config
+  apiClient,
+  onPageContext,
+  componentRegistry,
+  widgetRegistry,
 }: EngineConfig & { children: ReactNode }) {
+  const value = useMemo<EngineConfig>(
+    () => ({ apiClient, onPageContext, componentRegistry, widgetRegistry }),
+    [apiClient, onPageContext, componentRegistry, widgetRegistry],
+  );
+
   return (
-    <EngineContext.Provider value={config}>
+    <EngineContext.Provider value={value}>
       {children}
     </EngineContext.Provider>
   );

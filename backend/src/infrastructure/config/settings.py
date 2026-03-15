@@ -28,6 +28,11 @@ class Settings(BaseSettings):
         "http://localhost:5175",
     ]
 
+    # MCP Server
+    # Set ERP_MCP_API_KEY in the environment (or docker-compose) to enable.
+    # An empty string means the MCP server will reject all incoming requests.
+    mcp_api_key: str = ""
+
     model_config = {"env_prefix": "ERP_", "env_file": ".env"}
 
 

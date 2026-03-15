@@ -1,0 +1,11 @@
+{
+  "_comment": "Copie este conteúdo para %APPDATA%\\Claude\\claude_desktop_config.json (Windows) ou ~/Library/Application Support/Claude/claude_desktop_config.json (macOS)",
+  "mcpServers": {
+    "autosystem-erp": {
+      "url": "https://app.cappyfy.com/mcp/sse",
+      "headers": {
+        "X-MCP-Api-Key": "change-me-mcp-secret"
+      }
+    }
+  }
+}

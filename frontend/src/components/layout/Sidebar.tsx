@@ -1,6 +1,6 @@
 import { Loader, Text, Tooltip } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../services/api';
 import { useThemeStore } from '../../state/themeStore';
@@ -27,6 +27,23 @@ export function Sidebar() {
 
   const schema = data?.schema;
 
+  // Inject "API Tokens" item into the settings section
+  const sections = useMemo(() => {
+    if (!schema?.sections) return [];
+    return schema.sections.map((section: any) => {
+      if (section.id === 'settings') {
+        return {
+          ...section,
+          items: [
+            ...(section.items ?? []),
+            { id: 'api-tokens', label: 'API Tokens', icon: 'key', path: '/settings' },
+          ],
+        };
+      }
+      return section;
+    });
+  }, [schema?.sections]);
+
   const toggleSection = useCallback((sectionId: string) => {
     setOpenSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
   }, []);
@@ -50,7 +67,6 @@ export function Sidebar() {
   };
 
   const renderSection = (section: any) => {
-    // "main" section or single-item sections render flat (no collapsible)
     if (section.id === 'main' || (section.items?.length ?? 0) <= 1) {
       return (
         <div key={section.id}>
@@ -62,14 +78,12 @@ export function Sidebar() {
       );
     }
 
-    // Multi-item sections render as collapsible menus
     const isOpen = openSections[section.id] ?? isSectionActive(section);
     const hasActive = isSectionActive(section);
 
     return (
       <div key={section.id} className="sidebar-section-collapsible">
         {collapsed ? (
-          // When collapsed, show items directly with tooltips
           section.items?.map((item: any) => renderNavItem(item))
         ) : (
           <>
@@ -95,7 +109,6 @@ export function Sidebar() {
 
   return (
     <div className={`admin-sidebar ${collapsed ? 'sidebar-collapsed' : ''}`}>
-      {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">
           {schema?.brand?.icon ?? 'E'}
@@ -107,18 +120,16 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Navigation */}
       <nav className="sidebar-nav">
         {isLoading ? (
           <div style={{ padding: 16, textAlign: 'center' }}>
             <Loader size="xs" />
           </div>
         ) : (
-          schema?.sections?.map((section: any) => renderSection(section))
+          sections.map((section: any) => renderSection(section))
         )}
       </nav>
 
-      {/* Footer */}
       <div className="sidebar-footer">
         {!collapsed && (
           <Text size="xs" c="dimmed">

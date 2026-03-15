@@ -17,6 +17,7 @@ from src.adapters.http.routers import (
     llm_router,
     otto_router,
     pages_router,
+    settings_router,
     workflow_router,
 )
 from src.infrastructure.config.settings import settings
@@ -93,8 +94,32 @@ def create_app() -> FastAPI:
         tags=["Accounts"],
     )
 
+    # User settings (API tokens)
+    app.include_router(
+        settings_router.router,
+        prefix="/settings",
+        tags=["Settings"],
+    )
+
     # Standardized error handling
     register_error_handlers(app)
+
+    # MCP Server — only mounted when ERP_MCP_API_KEY is configured
+    if settings.mcp_api_key:
+        from fastapi_mcp import FastApiMCP
+        from src.adapters.mcp.mcp_server import build_api_key_middleware
+
+        # Auth middleware must be registered before mounting (middleware runs in reverse)
+        build_api_key_middleware(app)
+
+        # Mount MCP server at /mcp — auto-discovers all FastAPI endpoints as tools
+        fastapi_mcp = FastApiMCP(app)
+        fastapi_mcp.mount()
+    else:
+        import logging
+        logging.getLogger(__name__).info(
+            "MCP server disabled — set ERP_MCP_API_KEY to enable"
+        )
 
     return app
 

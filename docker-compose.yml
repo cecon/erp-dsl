@@ -23,6 +23,7 @@ services:
       ERP_DATABASE_URL: postgresql://erpdsl:erpdsl@postgres:5432/erpdsl
       ERP_JWT_SECRET: super-secret-change-in-prod
       ERP_CORS_ORIGINS: '["http://localhost:5174","http://localhost:5175"]'
+      ERP_MCP_API_KEY: "change-me-mcp-secret"
       PYTHONPATH: /app
     depends_on:
       postgres:

@@ -3,7 +3,14 @@ WORKDIR /app
 
 # Copy workspace config
 COPY pnpm-workspace.yaml ./
+
+# Copy all workspace package.json files
 COPY packages/chat-ui/package.json ./packages/chat-ui/
+COPY packages/engine/package.json ./packages/engine/
+COPY packages/form-ui/package.json ./packages/form-ui/
+COPY packages/grid-ui/package.json ./packages/grid-ui/
+COPY packages/icons/package.json ./packages/icons/
+COPY packages/widgets/package.json ./packages/widgets/
 
 # Copy frontend
 COPY frontend/package.json ./frontend/
@@ -12,7 +19,7 @@ COPY frontend/package.json ./frontend/
 RUN npm install -g pnpm && cd frontend && pnpm install --no-frozen-lockfile
 
 # Copy source code
-COPY packages/chat-ui/ ./packages/chat-ui/
+COPY packages/ ./packages/
 COPY frontend/ ./frontend/
 
 # Build

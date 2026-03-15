@@ -25,7 +25,19 @@ import { useThemeStore } from '../../state/themeStore';
 export function ThemeDrawer() {
   const opened = useThemeStore((s) => s.themeDrawerOpened);
   const close = useThemeStore((s) => s.closeThemeDrawer);
-  const themeStore = useThemeStore();
+
+  // Individual selectors to avoid subscribing to the entire store
+  const primaryColor = useThemeStore((s) => s.primaryColor);
+  const colorScheme = useThemeStore((s) => s.colorScheme);
+  const radius = useThemeStore((s) => s.radius);
+  const fontSize = useThemeStore((s) => s.fontSize);
+  const sidebarCollapsed = useThemeStore((s) => s.sidebarCollapsed);
+  const setPrimaryColor = useThemeStore((s) => s.setPrimaryColor);
+  const setColorScheme = useThemeStore((s) => s.setColorScheme);
+  const setRadius = useThemeStore((s) => s.setRadius);
+  const setFontSize = useThemeStore((s) => s.setFontSize);
+  const toggleSidebar = useThemeStore((s) => s.toggleSidebar);
+
   const { setColorScheme: setMantineScheme } = useMantineColorScheme();
 
   const { data } = useQuery({
@@ -35,25 +47,25 @@ export function ThemeDrawer() {
 
   const getValue = (id: string): any => {
     const map: Record<string, any> = {
-      primaryColor: themeStore.primaryColor,
-      colorScheme: themeStore.colorScheme,
-      radius: themeStore.radius,
-      fontSize: themeStore.fontSize,
-      sidebarCollapsed: themeStore.sidebarCollapsed,
+      primaryColor,
+      colorScheme,
+      radius,
+      fontSize,
+      sidebarCollapsed,
     };
     return map[id];
   };
 
   const handleChange = (id: string, value: any) => {
     const handlers: Record<string, (v: any) => void> = {
-      primaryColor: (v) => themeStore.setPrimaryColor(v),
+      primaryColor: (v) => setPrimaryColor(v),
       colorScheme: (v) => {
-        themeStore.setColorScheme(v);
+        setColorScheme(v);
         setMantineScheme(v);
       },
-      radius: (v) => themeStore.setRadius(v),
-      fontSize: (v) => themeStore.setFontSize(v),
-      sidebarCollapsed: () => themeStore.toggleSidebar(),
+      radius: (v) => setRadius(v),
+      fontSize: (v) => setFontSize(v),
+      sidebarCollapsed: () => toggleSidebar(),
     };
     handlers[id]?.(value);
   };
