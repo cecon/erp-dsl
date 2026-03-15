@@ -19,7 +19,7 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from src.adapters.http.dependency_injection import get_tenant_db
@@ -188,7 +188,10 @@ def get_entity(
 @router.post("/{entity_name}")
 def create_entity(
     entity_name: str,
-    body: dict[str, Any],
+    body: dict[str, Any] = Body(
+        ...,
+        description="Campos do novo registro em formato JSON."
+    ),
     db: Session = Depends(get_tenant_db),
 ) -> dict[str, Any]:
     """Create a new row for an entity."""
@@ -209,7 +212,10 @@ def create_entity(
 def update_entity(
     entity_name: str,
     entity_id: str,
-    body: dict[str, Any],
+    body: dict[str, Any] = Body(
+        ...,
+        description="Campos a atualizar em formato JSON. Suporta optimistic locking via _version."
+    ),
     db: Session = Depends(get_tenant_db),
 ) -> dict[str, Any]:
     """Update an existing entity row (auto-filtered by tenant).

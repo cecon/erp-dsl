@@ -13,6 +13,7 @@ from src.adapters.http.routers import (
     account_router,
     agent_router,
     auth_router,
+    discovery_router,
     generic_crud_router,
     llm_router,
     otto_router,
@@ -104,6 +105,13 @@ def create_app() -> FastAPI:
     # Standardized error handling
     register_error_handlers(app)
 
+    # Discovery / introspection endpoints
+    app.include_router(
+        discovery_router.router,
+        prefix="/discovery",
+        tags=["Discovery"],
+    )
+
     # MCP Server — only mounted when ERP_MCP_API_KEY is configured
     if settings.mcp_api_key:
         from fastapi_mcp import FastApiMCP
@@ -112,9 +120,9 @@ def create_app() -> FastAPI:
         # Auth middleware must be registered before mounting (middleware runs in reverse)
         build_api_key_middleware(app)
 
-        # Mount MCP server — Streamable HTTP for Claude Web
+        # Mount MCP server — SSE transport for Claude Web
         fastapi_mcp = FastApiMCP(app)
-        fastapi_mcp.mount_http(app, mount_path="/mcp")
+        fastapi_mcp.mount(app, mount_path="/mcp")
     else:
         import logging
         logging.getLogger(__name__).info(

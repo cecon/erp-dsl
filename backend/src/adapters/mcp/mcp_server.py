@@ -54,21 +54,16 @@ def create_mcp_server(get_db: Any) -> FastMCP:
         ),
     )
 
-    # Register tool groups
-    from src.adapters.mcp.tools.entities_tools import register_entity_tools
-    from src.adapters.mcp.tools.pages_tools import register_page_tools
+    # Rotas do FastAPI já cuidam das ferramentas MCP. Nenhuma ação extra necessária.
     from src.adapters.mcp.tools.account_tools import register_account_tools
 
-    register_entity_tools(mcp, get_db)
-    register_page_tools(mcp, get_db)
     register_account_tools(mcp, get_db)
 
     logger.info("FastMCP server configured successfully")
     return mcp
 
-
 def build_api_key_middleware(app: FastAPI) -> None:
-    """Add a middleware to validate API keys on all /mcp/* requests.
+    \"\"\"Add a middleware to validate API keys on all /mcp/* requests.
 
     Accepts authentication via:
     1. X-MCP-Api-Key header (legacy — compared to ERP_MCP_API_KEY env var)
@@ -77,19 +72,28 @@ def build_api_key_middleware(app: FastAPI) -> None:
 
     On success, stores an AuthContext in contextvars so that internal
     tool calls from fastapi-mcp can inherit the identity.
-    """
+    \"\"\"
     import hashlib
+    from starlette.requests import Request
+    from starlette.responses import JSONResponse
+    from starlette.types import ASGIApp, Receive, Scope, Send
 
     from src.adapters.mcp.mcp_auth import validate_api_key
     from src.infrastructure.persistence.sqlalchemy.api_token_model import ApiTokenModel
 
-    @app.middleware("http")
-    async def mcp_auth_middleware(request: Request, call_next: Any) -> Any:
-        if request.url.path.startswith("/mcp"):
+    class MCPAuthASGIMiddleware:
+        def __init__(self, app: ASGIApp):
+            self.app = app
+
+        async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+            if scope["type"] != "http" or not scope.get("path", "").startswith("/mcp"):
+                return await self.app(scope, receive, send)
+
+            request = Request(scope, receive=receive, send=send)
+
             # 1. Legacy X-MCP-Api-Key header
             legacy_key = request.headers.get("X-MCP-Api-Key", "")
             if legacy_key and validate_api_key(legacy_key):
-                # Set admin context for legacy key
                 from src.adapters.mcp.mcp_auth import get_admin_context
                 from src.adapters.http.dependency_injection import SessionLocal
                 db = SessionLocal()
@@ -98,7 +102,7 @@ def build_api_key_middleware(app: FastAPI) -> None:
                     mcp_auth_context.set(ctx)
                 finally:
                     db.close()
-                return await call_next(request)
+                return await self.app(scope, receive, send)
 
             # 2. X-API-Key header or ?api_key= query param (user API tokens)
             raw_token = (
@@ -122,7 +126,6 @@ def build_api_key_middleware(app: FastAPI) -> None:
                         from datetime import datetime, timezone
                         from src.application.ports.auth_port import AuthContext
                         record.last_used_at = datetime.now(timezone.utc)
-                        # Build AuthContext from token owner
                         user = db.execute(
                             select(UserModel).where(UserModel.id == record.user_id)
                         ).scalar_one_or_none()
@@ -142,12 +145,14 @@ def build_api_key_middleware(app: FastAPI) -> None:
                             )
                         mcp_auth_context.set(ctx)
                         db.commit()
-                        return await call_next(request)
+                        return await self.app(scope, receive, send)
                 finally:
                     db.close()
 
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"error": "Invalid or missing API key. Use X-API-Key header or ?api_key= query parameter."},
             )
-        return await call_next(request)
+            await response(scope, receive, send)
+
+    app.add_middleware(MCPAuthASGIMiddleware)

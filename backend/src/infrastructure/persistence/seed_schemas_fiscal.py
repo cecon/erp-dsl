@@ -46,7 +46,7 @@ TAX_GROUPS_PAGE_SCHEMA: dict[str, Any] = {
 
 OPERATION_NATURES_PAGE_SCHEMA: dict[str, Any] = {
     "title": "Natureza de Operação",
-    "description": "Cadastro de naturezas de operação",
+    "description": "Cadastro de naturezas de operação e configurações fiscais",
     "layout": "grid",
     "dataSource": {
         "endpoint": "/entities/operation_natures",
@@ -54,17 +54,24 @@ OPERATION_NATURES_PAGE_SCHEMA: dict[str, Any] = {
         "method": "GET",
         "paginationParams": {"offset": "offset", "limit": "limit"},
         "fields": [
+            {"id": "codigo", "dbType": "string", "required": True},
             {"id": "descricao", "dbType": "string", "required": True},
             {"id": "tipo_movimento", "dbType": "string", "required": True},
+            {"id": "finalidade", "dbType": "string", "required": True},
+            {"id": "movimenta_estoque", "dbType": "boolean", "required": False},
+            {"id": "gera_financeiro", "dbType": "boolean", "required": False},
+            {"id": "gera_nfe", "dbType": "boolean", "required": False},
+            {"id": "observacoes", "dbType": "string", "required": False},
         ],
     },
     "columns": [
+        {"id": "col-codigo", "key": "codigo", "label": "CFOP"},
         {"id": "col-descricao", "key": "descricao", "label": "Descrição"},
-        {
-            "id": "col-tipo",
-            "key": "tipo_movimento",
-            "label": "Tipo Movimento",
-        },
+        {"id": "col-tipo", "key": "tipo_movimento", "label": "Tipo"},
+        {"id": "col-finalidade", "key": "finalidade", "label": "Finalidade"},
+        {"id": "col-estoque", "key": "movimenta_estoque", "label": "Estoque"},
+        {"id": "col-financeiro", "key": "gera_financeiro", "label": "Financeiro"},
+        {"id": "col-nfe", "key": "gera_nfe", "label": "NF-e"},
     ],
     "actions": [
         {
@@ -286,8 +293,8 @@ TAX_GROUPS_FORM_SCHEMA: dict[str, Any] = {
 # ─── Operation Natures Form Page ─────────────────────────────────
 
 OPERATION_NATURES_FORM_SCHEMA: dict[str, Any] = {
-    "title": "Configurar Natureza de Operação",
-    "description": "Crie ou edite a natureza de operação",
+    "title": "Nova natureza de operação",
+    "description": "Cadastro de CFOP e configurações fiscais",
     "layout": "form",
     "dataSource": {
         "endpoint": "/entities/operation_natures",
@@ -299,33 +306,95 @@ OPERATION_NATURES_FORM_SCHEMA: dict[str, Any] = {
             "type": "form",
             "components": [
                 {
-                    "id": "descricao",
-                    "type": "text",
-                    "label": "Descrição",
+                    "id": "section-identificacao",
+                    "type": "section",
+                    "label": "IDENTIFICAÇÃO",
+                    "columns": 2,
+                    "components": [
+                        {
+                            "id": "codigo",
+                            "type": "text",
+                            "label": "Código (CFOP)",
+                            "placeholder": "5.101",
+                            "required": True,
+                        },
+                        {
+                            "id": "descricao",
+                            "type": "text",
+                            "label": "Descrição",
+                            "placeholder": "Ex.: Venda de produção do estabelecimento",
+                            "required": True,
+                        },
+                    ],
                 },
                 {
                     "id": "tipo_movimento",
-                    "type": "select",
-                    "label": "Tipo de Movimento",
+                    "type": "segmented",
+                    "label": "TIPO DE MOVIMENTO",
                     "options": [
-                        {"value": "Entrada", "label": "Entrada"},
                         {"value": "Saída", "label": "Saída"},
+                        {"value": "Entrada", "label": "Entrada"},
                     ],
+                },
+                {
+                    "id": "finalidade",
+                    "type": "segmented",
+                    "label": "FINALIDADE",
+                    "options": [
+                        {"value": "Revenda", "label": "Revenda"},
+                        {"value": "Uso e consumo", "label": "Uso e consumo"},
+                        {"value": "Ativo imobilizado", "label": "Ativo imobilizado"},
+                        {"value": "Industrialização", "label": "Industrialização"},
+                        {"value": "Devolução", "label": "Devolução"},
+                    ],
+                },
+                {
+                    "id": "section-comportamentos",
+                    "type": "section",
+                    "label": "COMPORTAMENTOS",
+                    "components": [
+                        {
+                            "id": "movimenta_estoque",
+                            "type": "switch",
+                            "label": "Movimenta estoque",
+                            "description": "Gera entrada ou saída no saldo de estoque",
+                        },
+                        {
+                            "id": "gera_financeiro",
+                            "type": "switch",
+                            "label": "Gera financeiro",
+                            "description": "Cria título a pagar ou receber",
+                        },
+                        {
+                            "id": "gera_nfe",
+                            "type": "switch",
+                            "label": "Gera NF-e/NFC-e",
+                            "description": "Exige emissão de documento fiscal eletrônico",
+                        },
+                    ],
+                },
+                {
+                    "id": "observacoes",
+                    "type": "textarea",
+                    "label": "OBSERVAÇÕES",
+                    "badge": "OPCIONAL",
+                    "placeholder": "Notas internas sobre o uso desta natureza...",
                 },
             ],
             "actions": [
-                {
-                    "id": "submit-btn",
-                    "type": "submit",
-                    "label": "Salvar",
-                },
                 {
                     "id": "cancel-btn",
                     "type": "cancel",
                     "label": "Cancelar",
                     "navigateTo": "/pages/operation_natures",
-                }
-            ]
+                },
+                {
+                    "id": "submit-btn",
+                    "type": "submit",
+                    "label": "Salvar natureza",
+                    "icon": "external-link",
+                },
+            ],
         }
     ],
 }

@@ -16,3 +16,4 @@ export { TextAreaField } from './TextAreaField';
 export { ColorSwatchPicker } from './ColorSwatchPicker';
 export { ThemeSwitch } from './ThemeSwitch';
 export { SegmentedField } from './SegmentedField';
+export { SwitchField } from './SwitchField';

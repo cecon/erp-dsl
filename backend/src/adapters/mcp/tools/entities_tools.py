@@ -184,3 +184,73 @@ def register_entity_tools(mcp: FastMCP, get_db: Any) -> None:
             return {"detail": f"{entity_name} '{entity_id}' deleted"}
         finally:
             db.close()
+
+    @mcp.tool()
+    def list_entity_types() -> list[dict[str, Any]]:
+        """Lista todas as entidades (tabelas) disponíveis no ERP.
+
+        Retorna o nome da entidade, a descrição e os campos disponíveis.
+        Use isto para descobrir quais entidades existem antes de chamar
+        list_entities, get_entity, create_entity, etc.
+        """
+        db: Session = next(get_db())
+        try:
+            pages = (
+                db.query(PageVersionModel)
+                .filter(
+                    PageVersionModel.scope == "global",
+                    PageVersionModel.status == "published",
+                    PageVersionModel.page_key.notlike("\\_%"),  # Skip _sidebar, _header, etc.
+                    ~PageVersionModel.page_key.endswith("_form"),  # Skip form pages
+                )
+                .order_by(PageVersionModel.page_key)
+                .all()
+            )
+            result = []
+            for p in pages:
+                schema = p.schema_json or {}
+                ds = schema.get("dataSource", {})
+                fields = ds.get("fields", [])
+                result.append({
+                    "entity_name": p.page_key,
+                    "title": schema.get("title", p.page_key),
+                    "description": schema.get("description", ""),
+                    "table_name": ds.get("tableName", p.page_key),
+                    "fields": [
+                        {"id": f["id"], "type": f.get("dbType", "string"), "required": f.get("required", False)}
+                        for f in fields
+                    ],
+                })
+            return result
+        finally:
+            db.close()
+
+    @mcp.tool()
+    def list_pages() -> list[dict[str, str]]:
+        """Lista todos os page schemas publicados no ERP.
+
+        Retorna page_key, título e layout (grid ou form).
+        Útil para descobrir todas as telas disponíveis no sistema.
+        """
+        db: Session = next(get_db())
+        try:
+            pages = (
+                db.query(PageVersionModel)
+                .filter(
+                    PageVersionModel.scope == "global",
+                    PageVersionModel.status == "published",
+                )
+                .order_by(PageVersionModel.page_key)
+                .all()
+            )
+            return [
+                {
+                    "page_key": p.page_key,
+                    "title": (p.schema_json or {}).get("title", p.page_key),
+                    "layout": (p.schema_json or {}).get("layout", "unknown"),
+                }
+                for p in pages
+            ]
+        finally:
+            db.close()
+

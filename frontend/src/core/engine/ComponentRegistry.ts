@@ -11,6 +11,7 @@ import {
   ColorSwatchPicker,
   ThemeSwitch,
   SegmentedField,
+  SwitchField,
 } from '@erp-dsl/form-ui';
 import { ProductEnrichModal } from '../../features/agent/ProductEnrichModal';
 import { WorkflowStepEditorField } from '../../features/workflows';
@@ -37,6 +38,7 @@ export const componentRegistry: Record<string, ComponentType<any>> = {
   color_swatch_picker: ColorSwatchPicker,
   theme_switch: ThemeSwitch,
   segmented: SegmentedField,
+  switch: SwitchField,
   hidden: () => null,
 
   /* ── Agent modals ─────────────────────────────────────── */

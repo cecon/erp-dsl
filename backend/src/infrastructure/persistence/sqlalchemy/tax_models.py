@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Integer, Numeric, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String
 
 from src.infrastructure.persistence.sqlalchemy.models import Base
 
@@ -36,8 +36,14 @@ class OperationNatureModel(Base):
 
     id = Column(String(36), primary_key=True)
     tenant_id = Column(String(36), nullable=False, index=True)
+    codigo = Column(String(16), nullable=False, default="")  # CFOP e.g. "5.101"
     descricao = Column(String(255), nullable=False)
     tipo_movimento = Column(String(16), nullable=False)  # Entrada/Saída
+    finalidade = Column(String(32), nullable=False, default="Revenda")
+    movimenta_estoque = Column(Boolean, nullable=False, default=True)
+    gera_financeiro = Column(Boolean, nullable=False, default=True)
+    gera_nfe = Column(Boolean, nullable=False, default=False)
+    observacoes = Column(String(1000), nullable=True, default="")
     created_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

@@ -162,15 +162,22 @@ export function DynamicForm({
 
     // Section: render a titled group with child fields
     if (field.type === 'section') {
+      const children = field.components?.map((child) => renderField(child));
       return (
         <div key={field.id}>
           <Divider my="md" />
           <Title order={5} mb="sm">
             {field.label}
           </Title>
-          <Stack gap="md">
-            {field.components?.map((child) => renderField(child))}
-          </Stack>
+          {field.columns ? (
+            <SimpleGrid cols={field.columns} spacing="md">
+              {children}
+            </SimpleGrid>
+          ) : (
+            <Stack gap="md">
+              {children}
+            </Stack>
+          )}
         </div>
       );
     }
