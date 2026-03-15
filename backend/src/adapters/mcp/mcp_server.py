@@ -63,7 +63,7 @@ def create_mcp_server(get_db: Any) -> FastMCP:
     return mcp
 
 def build_api_key_middleware(app: FastAPI) -> None:
-    \"\"\"Add a middleware to validate API keys on all /mcp/* requests.
+    """Add a middleware to validate API keys on all /mcp/* requests.
 
     Accepts authentication via:
     1. X-MCP-Api-Key header (legacy — compared to ERP_MCP_API_KEY env var)
@@ -72,7 +72,7 @@ def build_api_key_middleware(app: FastAPI) -> None:
 
     On success, stores an AuthContext in contextvars so that internal
     tool calls from fastapi-mcp can inherit the identity.
-    \"\"\"
+    """
     import hashlib
     from starlette.requests import Request
     from starlette.responses import JSONResponse
@@ -90,6 +90,13 @@ def build_api_key_middleware(app: FastAPI) -> None:
                 return await self.app(scope, receive, send)
 
             request = Request(scope, receive=receive, send=send)
+            
+            # fastmcp uses /mcp/messages/?session_id=... for POST requests.
+            # Claude Web does not forward the API key initialized in the SSE connection.
+            # By allowing POST /mcp/messages/ to pass, we rely on fastmcp's internal session validation.
+            path = scope.get("path", "")
+            if request.method == "POST" and path.startswith("/mcp/messages"):
+                return await self.app(scope, receive, send)
 
             # 1. Legacy X-MCP-Api-Key header
             legacy_key = request.headers.get("X-MCP-Api-Key", "")
