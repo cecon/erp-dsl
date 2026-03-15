@@ -13,10 +13,8 @@ from sqlalchemy.orm import Session
 
 from src.adapters.mcp.mcp_auth import get_admin_context
 from src.application.dsl_functions.pipeline_runner import (
-    run_request_pipeline,
     run_response_pipeline,
 )
-from src.application.dsl_functions.validators import validate_data
 from src.infrastructure.persistence.sqlalchemy.generic_crud_repository import (
     GenericCrudRepository,
 )
@@ -109,58 +107,7 @@ def register_entity_tools(mcp: FastMCP, get_db: Any) -> None:
         finally:
             db.close()
 
-    @mcp.tool()
-    def create_entity(entity_name: str, data: dict[str, Any]) -> dict[str, Any]:
-        """Cria um novo registro em uma entidade do ERP.
 
-        Args:
-            entity_name: Nome da entidade (ex: 'produtos', 'clientes').
-            data: Dados do novo registro como dicionário de campos.
-        """
-        db: Session = next(get_db())
-        try:
-            ctx = get_admin_context(db)
-            db.info["tenant_id"] = ctx.tenant_id
-            schema = _resolve_schema(db, entity_name)
-            table_name = _get_table_name(schema, entity_name)
-            validate_data(data, schema, context="create")
-            data = run_request_pipeline(data, schema)
-            repo = GenericCrudRepository(db)
-            result = repo.create(table_name, ctx.tenant_id, data)
-            db.commit()
-            return run_response_pipeline(_serialize(result), schema)
-        finally:
-            db.close()
-
-    @mcp.tool()
-    def update_entity(
-        entity_name: str,
-        entity_id: str,
-        data: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Atualiza um registro existente em uma entidade do ERP.
-
-        Args:
-            entity_name: Nome da entidade (ex: 'produtos', 'clientes').
-            entity_id: ID do registro a ser atualizado.
-            data: Campos a atualizar como dicionário.
-        """
-        db: Session = next(get_db())
-        try:
-            ctx = get_admin_context(db)
-            db.info["tenant_id"] = ctx.tenant_id
-            schema = _resolve_schema(db, entity_name)
-            table_name = _get_table_name(schema, entity_name)
-            validate_data(data, schema, context="update")
-            data = run_request_pipeline(data, schema)
-            repo = GenericCrudRepository(db)
-            result = repo.update(table_name, ctx.tenant_id, entity_id, data)
-            if not result:
-                raise ValueError(f"Entity '{entity_name}' with id '{entity_id}' not found")
-            db.commit()
-            return run_response_pipeline(_serialize(result), schema)
-        finally:
-            db.close()
 
     @mcp.tool()
     def delete_entity(entity_name: str, entity_id: str) -> dict[str, str]:

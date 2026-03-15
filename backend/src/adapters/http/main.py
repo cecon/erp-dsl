@@ -114,15 +114,17 @@ def create_app() -> FastAPI:
 
     # MCP Server — only mounted when ERP_MCP_API_KEY is configured
     if settings.mcp_api_key:
-        from fastapi_mcp import FastApiMCP
-        from src.adapters.mcp.mcp_server import build_api_key_middleware
+        from src.adapters.mcp.mcp_server import create_mcp_server, build_api_key_middleware
+        from src.adapters.http.dependency_injection import get_db
 
         # Auth middleware must be registered before mounting (middleware runs in reverse)
         build_api_key_middleware(app)
 
         # Mount MCP server — SSE transport for Claude Web
-        fastapi_mcp = FastApiMCP(app)
-        fastapi_mcp.mount(app, mount_path="/mcp")
+        # Usamos o FastMCP oficial (mcp.server.fastmcp.FastMCP) gerando um sub-app Starlette, 
+        # em vez do fastapi_mcp que tenta exportar as rotas HTTP de forma confusa.
+        mcp = create_mcp_server(get_db)
+        app.mount("/mcp", mcp.sse_app())
     else:
         import logging
         logging.getLogger(__name__).info(

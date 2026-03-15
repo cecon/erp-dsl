@@ -97,3 +97,42 @@ def register_account_tools(mcp: FastMCP, get_db: Any) -> None:
             return [p.page_key for p in pages]
         finally:
             db.close()
+
+    @mcp.tool()
+    def create_entity(entity_name: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Cria um novo registro para uma entidade do ERP.
+
+        Args:
+            entity_name: Nome da entidade (ex: operation_natures, products).
+            body: Campos do novo registro em formato JSON.
+        """
+        from src.adapters.http.routers.generic_crud_router import create_entity as _create
+        from src.adapters.http.dependency_injection import SessionLocal
+        
+        db = SessionLocal()
+        try:
+            ctx = get_admin_context(db)
+            db.info["tenant_id"] = ctx.tenant_id
+            return _create(entity_name=entity_name, body=body, db=db)
+        finally:
+            db.close()
+
+    @mcp.tool()
+    def update_entity(entity_name: str, entity_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Atualiza um registro existente em uma entidade do ERP.
+
+        Args:
+            entity_name: Nome da entidade (ex: operation_natures, products).
+            entity_id: ID do registro a ser atualizado.
+            body: Campos a atualizar em formato JSON.
+        """
+        from src.adapters.http.routers.generic_crud_router import update_entity as _update
+        from src.adapters.http.dependency_injection import SessionLocal
+        
+        db = SessionLocal()
+        try:
+            ctx = get_admin_context(db)
+            db.info["tenant_id"] = ctx.tenant_id
+            return _update(entity_name=entity_name, entity_id=entity_id, body=body, db=db)
+        finally:
+            db.close()
