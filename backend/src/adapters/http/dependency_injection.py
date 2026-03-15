@@ -112,12 +112,21 @@ def get_current_user(
     """Resolve the current user from a JWT Bearer token, API token header, or Bearer API token.
 
     Priority:
+    0. MCP context — if the request comes from an MCP tool call,
+       the middleware already authenticated and stored the context in contextvars.
     1. X-API-Key header — looked up in the api_tokens table by SHA-256 hash.
        On match, resolves to the token owner's AuthContext.
-    2. Authorization: Bearer <value> — if it doesn't decode as a valid JWT,
+    2. ?api_key= query parameter — same lookup as X-API-Key.
+    3. Authorization: Bearer <value> — if it doesn't decode as a valid JWT,
        also tried as an API token via the same hash lookup.
-    3. Authorization: Bearer <jwt> — standard JWT app authentication.
+    4. Authorization: Bearer <jwt> — standard JWT app authentication.
     """
+    # 0. MCP context (propagated from MCP middleware via contextvars)
+    from src.adapters.mcp.mcp_server import mcp_auth_context
+    mcp_ctx = mcp_auth_context.get(None)
+    if mcp_ctx is not None:
+        return mcp_ctx
+
     import hashlib
     from datetime import datetime, timezone
     from sqlalchemy import select
@@ -156,7 +165,14 @@ def get_current_user(
         if ctx:
             return ctx
 
-    # 2. Bearer token — try as API token first, then as JWT
+    # 2. ?api_key= query parameter (Claude Web MCP connector)
+    api_key_param = request.query_params.get("api_key", "")
+    if api_key_param:
+        ctx = _lookup_token(api_key_param)
+        if ctx:
+            return ctx
+
+    # 3. Bearer token — try as API token first, then as JWT
     if credentials is not None:
         ctx = _lookup_token(credentials.credentials)
         if ctx:

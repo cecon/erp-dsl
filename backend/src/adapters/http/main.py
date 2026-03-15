@@ -112,9 +112,9 @@ def create_app() -> FastAPI:
         # Auth middleware must be registered before mounting (middleware runs in reverse)
         build_api_key_middleware(app)
 
-        # Mount MCP server at /mcp — auto-discovers all FastAPI endpoints as tools
+        # Mount MCP server — Streamable HTTP for Claude Web
         fastapi_mcp = FastApiMCP(app)
-        fastapi_mcp.mount()
+        fastapi_mcp.mount_http(app, mount_path="/mcp")
     else:
         import logging
         logging.getLogger(__name__).info(
