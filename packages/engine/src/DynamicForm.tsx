@@ -16,6 +16,13 @@ interface ComputedDef {
   deps: string[];
 }
 
+export interface ValidationRule {
+  /** Regex como string (será compilado em runtime) */
+  pattern?: string;
+  /** Mensagem de erro custom para esta regra */
+  message?: string;
+}
+
 export interface SchemaField {
   id: string;
   type: string;
@@ -30,6 +37,28 @@ export interface SchemaField {
   dataSource?: string;
   /** Maps form field ids to query param names for dataSource URLs */
   dataSourceParams?: Record<string, string>;
+  // ── Validação declarativa ─────────────────────────────────────────────
+  /** Campo obrigatório — mostra badge UX e valida no submit */
+  required?: boolean;
+  /** Limite máximo de caracteres (string) — habilita char counter */
+  maxLength?: number;
+  /** Mínimo de caracteres (string) */
+  minLength?: number;
+  /** Valor mínimo permitido (numérico) */
+  min?: number;
+  /** Valor máximo permitido (numérico) */
+  max?: number;
+  /** Texto de ajuda exibido abaixo do campo */
+  description?: string;
+  /** Regras de validação extras (pattern + mensagem custom) */
+  validation?: ValidationRule[];
+  // ── Deprecação ──────────────────────────────────────────────────────────
+  /** Campo marcado para remoção — ativa o DeprecationNotice no FieldWrapper */
+  deprecated?: boolean;
+  /** Data ISO (YYYY-MM-DD) de remoção: controla a urgência visual */
+  deprecatedAt?: string;
+  /** Mensagem explicando o motivo e o que o usuário deve fazer */
+  deprecationMessage?: string;
 }
 
 interface DynamicFormProps {
@@ -112,6 +141,93 @@ function evalFormula(formula: string, values: Record<string, any>): string {
  *
  * Uses the componentRegistry from EngineProvider to resolve field components.
  */
+/**
+ * Constrói o objeto `validate` do Mantine a partir das regras declarativas
+ * do SchemaField, gerando mensagens de erro em PT-BR automaticamente.
+ */
+function buildValidators(
+  fields: SchemaField[],
+): Record<string, (value: any) => string | null> {
+  const validators: Record<string, (value: any) => string | null> = {};
+
+  function processField(field: SchemaField) {
+    if (CONTAINER_TYPES.has(field.type) && field.components) {
+      field.components.forEach(processField);
+      return;
+    }
+
+    const rules: Array<(v: any) => string | null> = [];
+
+    if (field.required) {
+      rules.push((v) => {
+        if (v === null || v === undefined || v === '' || v === false) {
+          return `${field.label ?? field.id} é obrigatório`;
+        }
+        return null;
+      });
+    }
+
+    if (field.minLength) {
+      const min = field.minLength;
+      rules.push((v) =>
+        typeof v === 'string' && v.length > 0 && v.length < min
+          ? `Mínimo de ${min} caracteres`
+          : null,
+      );
+    }
+
+    if (field.maxLength) {
+      const max = field.maxLength;
+      rules.push((v) =>
+        typeof v === 'string' && v.length > max
+          ? `Máximo de ${max} caracteres`
+          : null,
+      );
+    }
+
+    if (field.min !== undefined) {
+      const min = field.min;
+      rules.push((v) => {
+        const n = parseFloat(v);
+        return !isNaN(n) && n < min ? `Valor mínimo: ${min}` : null;
+      });
+    }
+
+    if (field.max !== undefined) {
+      const max = field.max;
+      rules.push((v) => {
+        const n = parseFloat(v);
+        return !isNaN(n) && n > max ? `Valor máximo: ${max}` : null;
+      });
+    }
+
+    if (field.validation) {
+      for (const rule of field.validation) {
+        if (rule.pattern) {
+          const regex = new RegExp(rule.pattern);
+          const msg = rule.message ?? `Formato inválido`;
+          rules.push((v) =>
+            typeof v === 'string' && v.length > 0 && !regex.test(v) ? msg : null,
+          );
+        }
+      }
+    }
+
+    if (rules.length > 0) {
+      validators[field.id] = (v) => {
+        for (const rule of rules) {
+          const err = rule(v);
+          if (err) return err;
+        }
+        return null;
+      };
+    }
+  }
+
+  fields.forEach(processField);
+  return validators;
+}
+
 export function DynamicForm({
   fields,
   initialValues = {},
@@ -122,6 +238,7 @@ export function DynamicForm({
   const { componentRegistry } = useEngine();
   const form = useForm({
     initialValues: flattenFieldIds(fields, initialValues),
+    validate: buildValidators(fields),
   });
 
   // Gather computed fields once
@@ -243,6 +360,20 @@ export function DynamicForm({
       }
     }
 
+    // Props de validação/UX a repassar ao componente
+    const validationProps: Record<string, any> = {
+      required: field.required,
+      maxLength: field.maxLength,
+      minLength: field.minLength,
+      min: field.min,
+      max: field.max,
+      description: field.description,
+      // Deprecação
+      deprecated: field.deprecated,
+      deprecatedAt: field.deprecatedAt,
+      deprecationMessage: field.deprecationMessage,
+    };
+
     return (
       <Component
         key={field.id}
@@ -251,6 +382,7 @@ export function DynamicForm({
         options={field.options}
         readOnly={field.readonly}
         disabled={field.readonly}
+        {...validationProps}
         {...extraProps}
         {...form.getInputProps(field.id)}
       />

@@ -6,6 +6,9 @@ import { DynamicMrtGrid } from '@erp-dsl/grid-ui';
 import { useEngine } from './EngineProvider';
 import { getComponent } from './ComponentRegistry';
 import { DynamicForm } from './DynamicForm';
+import { SchemaVersionBanner } from './SchemaVersionBanner';
+import { RecordMetaBanner } from './RecordMetaBanner';
+import { FormVersionSwitcher } from './FormVersionSwitcher';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -72,6 +75,7 @@ export function PageRenderer() {
   const schema = pageData?.schema;
   const dataSource = schema?.dataSource;
   const endpoint = dataSource?.endpoint ?? `/${pageKey}`;
+  const currentSchemaVersion = (pageData as any)?.version_number as number | undefined;
 
   /* ── Sync page context ──────────────────────────────────────── */
 
@@ -249,6 +253,9 @@ export function PageRenderer() {
 
   return (
     <Stack gap="lg">
+      {/* Schema Version Banner — visível apenas para admins com schema tenant */}
+      {pageKey && <SchemaVersionBanner pageKey={pageKey} />}
+
       {/* Page Header */}
       <div className="page-header">
         <div>
@@ -292,6 +299,17 @@ export function PageRenderer() {
 
       {isFormLayout ? (
         <div className="admin-card">
+          {/* FormVersionSwitcher — banner "NEW" quando nova versão disponível */}
+          {pageKey && currentSchemaVersion && (
+            <FormVersionSwitcher
+              pageKey={pageKey}
+              currentVersion={currentSchemaVersion}
+              latestVersion={currentSchemaVersion}
+              onVersionChange={() => {
+                queryClient.invalidateQueries({ queryKey: ['page', pageKey] });
+              }}
+            />
+          )}
           <DynamicForm
             fields={formFields}
             initialValues={singleItemData ?? {}}
@@ -301,11 +319,16 @@ export function PageRenderer() {
               } else {
                 createMutation.mutate(values);
               }
-              // Redirect back handling could be improved based on schema actions
               window.history.back();
             }}
             onCancel={() => window.history.back()}
             submitLabel="Salvar"
+          />
+          {/* RecordMetaBanner — metadados do registro */}
+          <RecordMetaBanner
+            initialValues={singleItemData ?? {}}
+            schemaVersion={currentSchemaVersion}
+            isEditMode={!!editId}
           />
         </div>
       ) : (

@@ -8,7 +8,7 @@ from alembic.config import Config
 from sqlalchemy.orm import Session
 
 from src.adapters.http.dependency_injection import SessionLocal
-from src.infrastructure.persistence.seed import seed_database
+from src.infrastructure.persistence.seed import seed_database, sync_schemas
 
 
 def main() -> None:
@@ -16,10 +16,18 @@ def main() -> None:
     alembic_cfg = Config("alembic.ini")
     command.upgrade(alembic_cfg, "head")
 
-    # Seed
+    # Seed (only creates records that don't exist yet)
     session = SessionLocal()
     try:
         seed_database(session)
+    finally:
+        session.close()
+
+    # Sync schemas: atualiza page_versions cujo hash mudou desde o último deploy.
+    # Uma única atualização cobre todos os tenants (schemas scope="global" têm tenant_id=NULL).
+    session = SessionLocal()
+    try:
+        sync_schemas(session)
     finally:
         session.close()
 

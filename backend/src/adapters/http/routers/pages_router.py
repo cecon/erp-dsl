@@ -12,13 +12,16 @@ from src.adapters.http.dependency_injection import (
     get_current_user,
     get_db,
     get_page_use_case,
+    get_version_status_use_case,
     merge_page_use_case,
     publish_page_use_case,
+    require_role,
     rollback_page_use_case,
 )
 from src.application.ports.auth_port import AuthContext
 from src.application.use_cases.create_draft import CreateDraftUseCase
 from src.application.use_cases.get_page import GetPageUseCase
+from src.application.use_cases.get_version_status import GetVersionStatusUseCase
 from src.application.use_cases.merge_page import MergePageUseCase
 from src.application.use_cases.publish_page import PublishPageUseCase
 from src.application.use_cases.rollback_page import RollbackPageUseCase
@@ -49,11 +52,26 @@ def get_page(
     return result
 
 
+@router.get("/{page_key}/version-status")
+def get_version_status(
+    page_key: str,
+    auth: AuthContext = Depends(get_current_user),
+    uc: GetVersionStatusUseCase = Depends(get_version_status_use_case),
+) -> dict[str, Any]:
+    """Retorna o status de versão do schema para o tenant autenticado.
+
+    Usado pelo SchemaVersionBanner para exibir se há atualizações disponíveis.
+    Qualquer usuário autenticado pode ver o status; ações de merge/rollback
+    são restritas a admins.
+    """
+    return uc.execute(page_key, auth.tenant_id)
+
+
 @router.post("/{page_key}/draft")
 def create_draft(
     page_key: str,
     body: DraftRequest,
-    auth: AuthContext = Depends(get_current_user),
+    auth: AuthContext = Depends(require_role("admin")),
     uc: CreateDraftUseCase = Depends(create_draft_use_case),
     db=Depends(get_db),
 ) -> dict[str, Any]:
@@ -73,7 +91,7 @@ def create_draft(
 def publish_page(
     page_key: str,
     body: PublishRequest,
-    auth: AuthContext = Depends(get_current_user),
+    auth: AuthContext = Depends(require_role("admin")),
     uc: PublishPageUseCase = Depends(publish_page_use_case),
     db=Depends(get_db),
 ) -> dict[str, Any]:
@@ -89,7 +107,7 @@ def publish_page(
 def rollback_page(
     page_key: str,
     version_id: str,
-    auth: AuthContext = Depends(get_current_user),
+    auth: AuthContext = Depends(require_role("admin")),
     uc: RollbackPageUseCase = Depends(rollback_page_use_case),
     db=Depends(get_db),
 ) -> dict[str, Any]:
@@ -108,7 +126,7 @@ def rollback_page(
 @router.post("/{page_key}/merge")
 def merge_page(
     page_key: str,
-    auth: AuthContext = Depends(get_current_user),
+    auth: AuthContext = Depends(require_role("admin")),
     uc: MergePageUseCase = Depends(merge_page_use_case),
     db=Depends(get_db),
 ) -> dict[str, Any]:

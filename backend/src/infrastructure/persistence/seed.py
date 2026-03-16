@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -69,21 +72,33 @@ SEED_PAGES = [
     ("_theme_config", THEME_CONFIG_SCHEMA),
 ]
 
+logger = logging.getLogger(__name__)
+
+
+def _schema_hash(schema: dict) -> str:
+    """MD5 do JSON canônico. Usado para detectar mudanças no schema em código."""
+    canonical = json.dumps(schema, sort_keys=True, ensure_ascii=False)
+    return hashlib.md5(canonical.encode()).hexdigest()
+
 
 def _seed_page(session: Session, page_key: str, schema: dict) -> None:
-    """Create a published page version ONLY if one doesn't already exist.
+    """Cria uma published page version SE ainda não existir.
 
-    Never overwrites an existing published version — user/Otto changes
-    are preserved across restarts.
+    Não sobrescreve versões existentes — use sync_schemas() para atualizar
+    schemas de sistema após um deploy.
     """
-    stmt = select(PageVersionModel).where(
-        PageVersionModel.page_key == page_key,
-        PageVersionModel.scope == "global",
-        PageVersionModel.status == "published",
+    stmt = (
+        select(PageVersionModel)
+        .where(
+            PageVersionModel.page_key == page_key,
+            PageVersionModel.scope == "global",
+            PageVersionModel.status == "published",
+        )
+        .order_by(PageVersionModel.version_number.desc())
+        .limit(1)
     )
     existing = session.execute(stmt).scalar_one_or_none()
     if existing:
-        # Already has a published version — do NOT overwrite
         return
 
     page = PageVersionModel(
@@ -100,6 +115,75 @@ def _seed_page(session: Session, page_key: str, schema: dict) -> None:
     )
     session.add(page)
 
+
+def sync_schemas(session: Session) -> None:
+    """Sincroniza page schemas de sistema criando NOVAS versões quando necessário.
+
+    Princípio arquitetural: nunca mutamos versões existentes. Quando o schema
+    em código diverge do banco, criamos uma nova versão publicada com
+    version_number incrementado. O histórico completo fica preservado para
+    rollback, e o renderer sempre busca a versão mais recente.
+
+    Hash MD5 do JSON canônico garante que só atualizamos quando algo realmente
+    mudou — evitando versões desnecessárias a cada deploy.
+
+    .. note::
+        Schemas scope="global" têm tenant_id=NULL: uma única linha cobre
+        todos os tenants da plataforma.
+    """
+    updated = 0
+    skipped = 0
+
+    for page_key, new_schema in SEED_PAGES:
+        # Busca a versão published mais recente (maior version_number)
+        stmt = (
+            select(PageVersionModel)
+            .where(
+                PageVersionModel.page_key == page_key,
+                PageVersionModel.scope == "global",
+                PageVersionModel.status == "published",
+            )
+            .order_by(PageVersionModel.version_number.desc())
+            .limit(1)
+        )
+        current = session.execute(stmt).scalar_one_or_none()
+        if not current:
+            skipped += 1
+            continue
+
+        current_hash = _schema_hash(current.schema_json or {})
+        new_hash = _schema_hash(new_schema)
+
+        if current_hash == new_hash:
+            skipped += 1
+            continue
+
+        # Cria nova versão — não toca na versão anterior (histórico preservado)
+        next_version = current.version_number + 1
+        new_page = PageVersionModel(
+            id=str(uuid.uuid4()),
+            page_key=page_key,
+            scope="global",
+            tenant_id=None,
+            base_version_id=current.id,
+            version_number=next_version,
+            schema_json=new_schema,
+            status="published",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        session.add(new_page)
+        updated += 1
+        logger.info(
+            "[schema-sync] '%s' v%d → v%d (hash changed)",
+            page_key, current.version_number, next_version,
+        )
+
+    if updated:
+        session.commit()
+        logger.info("[schema-sync] %d schemas atualizados, %d sem mudanças", updated, skipped)
+    else:
+        logger.debug("[schema-sync] Todos os %d schemas estão atualizados", skipped)
 
 def seed_database(session: Session) -> None:
     """Idempotent seed: only creates records if they don't exist."""

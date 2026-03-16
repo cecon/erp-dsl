@@ -34,6 +34,8 @@ export interface EngineConfig {
   componentRegistry: Record<string, ComponentType<any>>;
   /** Registry mapping DSL widget type strings to dashboard widget components */
   widgetRegistry?: Record<string, ComponentType<any>>;
+  /** Role do usuário logado. Usado para controlar visibilidade do SchemaVersionBanner. */
+  userRole?: string;
 }
 
 const EngineContext = createContext<EngineConfig | null>(null);
@@ -53,10 +55,11 @@ export function EngineProvider({
   onPageContext,
   componentRegistry,
   widgetRegistry,
+  userRole,
 }: EngineConfig & { children: ReactNode }) {
   const value = useMemo<EngineConfig>(
-    () => ({ apiClient, onPageContext, componentRegistry, widgetRegistry }),
-    [apiClient, onPageContext, componentRegistry, widgetRegistry],
+    () => ({ apiClient, onPageContext, componentRegistry, widgetRegistry, userRole }),
+    [apiClient, onPageContext, componentRegistry, widgetRegistry, userRole],
   );
 
   return (

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from src.application.ports.auth_port import AuthContext
 from src.application.use_cases.create_draft import CreateDraftUseCase
 from src.application.use_cases.get_page import GetPageUseCase
+from src.application.use_cases.get_version_status import GetVersionStatusUseCase
 from src.application.use_cases.merge_page import MergePageUseCase
 from src.application.use_cases.publish_page import PublishPageUseCase
 from src.application.use_cases.rollback_page import RollbackPageUseCase
@@ -188,6 +189,21 @@ def get_current_user(
     )
 
 
+def require_role(*roles: str):
+    """Dependência reutilizável para proteger endpoints por role.
+
+    Uso: auth: AuthContext = Depends(require_role("admin"))
+    """
+    def _check(auth: AuthContext = Depends(get_current_user)) -> AuthContext:
+        if auth.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Permissão insuficiente. Role necessário: {', '.join(roles)}",
+            )
+        return auth
+    return _check
+
+
 # ── Tenant-aware DB session ──────────────────────────────────────────
 
 def get_tenant_db(
@@ -229,6 +245,10 @@ def rollback_page_use_case(
 
 def merge_page_use_case(db: Session = Depends(get_db)) -> MergePageUseCase:
     return MergePageUseCase(PageRepositoryImpl(db))
+
+
+def get_version_status_use_case(db: Session = Depends(get_db)) -> GetVersionStatusUseCase:
+    return GetVersionStatusUseCase(PageRepositoryImpl(db))
 
 
 # ── Account use case factories ───────────────────────────────────────

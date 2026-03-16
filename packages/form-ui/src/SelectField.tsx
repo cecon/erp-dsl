@@ -1,8 +1,10 @@
-import { Select, type SelectProps } from '@mantine/core';
+import { Select } from '@mantine/core';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
+import { FieldWrapper, type FieldWrapperProps } from './FieldWrapper';
 
-export interface SelectFieldProps extends Omit<SelectProps, 'onChange' | 'data'> {
+export interface SelectFieldProps
+  extends Omit<FieldWrapperProps, 'children' | 'currentLength' | 'touched' | 'hasValue' | 'maxLength'> {
   value?: string | null;
   onChange?: (value: string | null) => void;
   options?: { value: string; label: string }[];
@@ -10,6 +12,10 @@ export interface SelectFieldProps extends Omit<SelectProps, 'onChange' | 'data'>
   dataSource?: string;
   /** Query params to append to the dataSource URL */
   dataSourceParams?: Record<string, string>;
+  placeholder?: string;
+  readOnly?: boolean;
+  disabled?: boolean;
+  error?: string;
 }
 
 /**
@@ -18,7 +24,7 @@ export interface SelectFieldProps extends Omit<SelectProps, 'onChange' | 'data'>
  *
  * When `dataSource` is provided, options are fetched from the endpoint
  * dynamically. The `dataSourceParams` are appended as query params.
- * Static `options` are used as fallback while loading or if fetch fails.
+ * Inclui badge Obrigatório/Opcional e ícone de status via FieldWrapper.
  */
 export function SelectField({
   value,
@@ -26,17 +32,22 @@ export function SelectField({
   options,
   dataSource,
   dataSourceParams,
-  ...rest
+  placeholder,
+  readOnly,
+  disabled,
+  label,
+  required,
+  description,
+  error,
 }: SelectFieldProps) {
   const [dynamicOptions, setDynamicOptions] = useState<
     { value: string; label: string }[] | null
   >(null);
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState(false);
 
   // Serialize params to use as dependency
-  const paramsKey = dataSourceParams
-    ? JSON.stringify(dataSourceParams)
-    : '';
+  const paramsKey = dataSourceParams ? JSON.stringify(dataSourceParams) : '';
 
   useEffect(() => {
     if (!dataSource || !dataSourceParams) return;
@@ -50,9 +61,7 @@ export function SelectField({
     let cancelled = false;
     setLoading(true);
 
-    const url = dataSource.startsWith('/api')
-      ? dataSource
-      : `/api${dataSource}`;
+    const url = dataSource.startsWith('/api') ? dataSource : `/api${dataSource}`;
 
     axios
       .get(url, { params: dataSourceParams })
@@ -62,7 +71,6 @@ export function SelectField({
         }
       })
       .catch(() => {
-        // Silently fall back to static options
         if (!cancelled) setDynamicOptions(null);
       })
       .finally(() => {
@@ -76,16 +84,33 @@ export function SelectField({
   }, [dataSource, paramsKey]);
 
   const finalOptions = dynamicOptions ?? options ?? [];
+  const hasValue = value !== null && value !== undefined && value !== '';
 
   return (
-    <Select
-      value={value ?? null}
-      onChange={(val) => onChange?.(val)}
-      data={finalOptions}
-      clearable
-      searchable
-      {...(loading ? { rightSection: undefined, placeholder: 'Carregando modelos...' } : {})}
-      {...rest}
-    />
+    <FieldWrapper
+      label={label}
+      required={required}
+      description={description}
+      error={error}
+      touched={touched}
+      hasValue={hasValue}
+    >
+      <Select
+        value={value ?? null}
+        onChange={(val) => {
+          setTouched(true);
+          onChange?.(val);
+        }}
+        onBlur={() => setTouched(true)}
+        data={finalOptions}
+        placeholder={loading ? 'Carregando...' : placeholder}
+        readOnly={readOnly}
+        disabled={disabled}
+        clearable
+        searchable
+        error={!!error}
+        aria-invalid={!!error}
+      />
+    </FieldWrapper>
   );
 }

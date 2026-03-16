@@ -4,8 +4,6 @@ Allows the Claude model to list, inspect and manage page schemas
 (the DSL definitions that drive the ERP frontend).
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP

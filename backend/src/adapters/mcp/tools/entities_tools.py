@@ -4,8 +4,6 @@ Each tool maps to the existing GenericCrudRepository logic,
 operating under the admin tenant context resolved from the database.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP

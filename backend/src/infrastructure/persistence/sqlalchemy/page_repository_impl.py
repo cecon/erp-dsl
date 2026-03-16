@@ -72,7 +72,13 @@ class PageRepositoryImpl:
         else:
             conditions.append(PageVersionModel.tenant_id.is_(None))
 
-        stmt = select(PageVersionModel).where(and_(*conditions)).limit(1)
+        # Sempre retorna a versão mais recente publicada
+        stmt = (
+            select(PageVersionModel)
+            .where(and_(*conditions))
+            .order_by(PageVersionModel.version_number.desc())
+            .limit(1)
+        )
         model = self._session.execute(stmt).scalar_one_or_none()
         return self._to_entity(model) if model else None
 

@@ -4,8 +4,6 @@ Provides read-only tools for the Claude model to inspect the
 current ERP project context (projects, apps, tenant info).
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP

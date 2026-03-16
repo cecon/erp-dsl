@@ -9,8 +9,6 @@ contextvars so that internal tool calls (made by fastapi-mcp) can
 inherit the authenticated identity without needing separate auth.
 """
 
-from __future__ import annotations
-
 import contextvars
 import logging
 from typing import Any

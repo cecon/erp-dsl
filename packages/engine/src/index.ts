@@ -11,3 +11,8 @@ export { DynamicForm } from './DynamicForm';
 export type { SchemaField } from './DynamicForm';
 export { PageRenderer } from './PageRenderer';
 export { DashboardRenderer } from './DashboardRenderer';
+
+// UX overlays
+export { SchemaVersionBanner } from './SchemaVersionBanner';
+export { RecordMetaBanner } from './RecordMetaBanner';
+export { FormVersionSwitcher, getVersionPreference } from './FormVersionSwitcher';
