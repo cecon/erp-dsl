@@ -191,10 +191,10 @@ export function SettingsPage() {
               <strong>Claude Desktop</strong> → claude_desktop_config.json → headers → X-API-Key: &lt;token&gt;
             </Text>
             <Text size="xs" c="dimmed">
-              <strong>OpenAPI URL:</strong> https://app.cappyfy.com/openapi.json
+              <strong>OpenAPI URL:</strong> https://mcp.c3bot.com/openapi.json
             </Text>
             <Text size="xs" c="dimmed">
-              <strong>MCP SSE URL:</strong> https://app.cappyfy.com/mcp/sse
+              <strong>MCP SSE URL:</strong> https://mcp.c3bot.com/mcp/sse
             </Text>
           </Stack>
         </Stack>

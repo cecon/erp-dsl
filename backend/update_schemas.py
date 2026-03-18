@@ -5,6 +5,7 @@ from sqlalchemy import text
 from src.infrastructure.persistence.seed_schemas_fiscal import (
     OPERATION_NATURES_PAGE_SCHEMA,
     OPERATION_NATURES_FORM_SCHEMA,
+    FISCAL_RULES_FORM_SCHEMA,
 )
 
 db = SessionLocal()
@@ -12,6 +13,7 @@ db = SessionLocal()
 for page_key, schema in [
     ("operation_natures", OPERATION_NATURES_PAGE_SCHEMA),
     ("operation_natures_form", OPERATION_NATURES_FORM_SCHEMA),
+    ("fiscal_rules_form", FISCAL_RULES_FORM_SCHEMA),
 ]:
     schema_json = json.dumps(schema, ensure_ascii=False)
     result = db.execute(

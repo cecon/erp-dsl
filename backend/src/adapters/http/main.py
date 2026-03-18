@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, AsyncExitStack
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
@@ -14,6 +14,7 @@ from src.adapters.http.routers import (
     agent_router,
     auth_router,
     discovery_router,
+    forge_router,
     generic_crud_router,
     llm_router,
     otto_router,
@@ -29,8 +30,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan: startup / shutdown hooks.
 
     Table creation and migrations are handled by Alembic in start.py.
+    If MCP is enabled, also runs the session_manager lifespan.
     """
-    yield
+    mcp_app = getattr(app.state, "mcp_sub_app", None)
+    if mcp_app is not None and hasattr(mcp_app, "router"):
+        async with AsyncExitStack() as stack:
+            await stack.enter_async_context(mcp_app.router.lifespan_context(mcp_app))
+            yield
+    else:
+        yield
     # Shutdown: nothing needed
 
 
@@ -72,6 +80,13 @@ def create_app() -> FastAPI:
         otto_router.router,
         prefix="/otto",
         tags=["Otto"],
+    )
+
+    # Forge — autonomous coding agent
+    app.include_router(
+        forge_router.router,
+        prefix="/forge",
+        tags=["Forge"],
     )
 
     # LLM utility endpoints (model listing)
@@ -120,11 +135,14 @@ def create_app() -> FastAPI:
         # Auth middleware must be registered before mounting (middleware runs in reverse)
         build_api_key_middleware(app)
 
-        # Mount MCP server — SSE transport for Claude Web
-        # Usamos o FastMCP oficial (mcp.server.fastmcp.FastMCP) gerando um sub-app Starlette, 
-        # em vez do fastapi_mcp que tenta exportar as rotas HTTP de forma confusa.
+        # Mount MCP server — Streamable HTTP transport (MCP SDK >= 1.6)
+        # streamable_http_app() expõe a rota /mcp internamente.
+        # Montamos na raiz (path vazio) para que /mcp chegue diretamente ao sub-app.
+        # O lifespan do sub-app é composto no lifespan do FastAPI via app.state.mcp_sub_app.
         mcp = create_mcp_server(get_db)
-        app.mount("/mcp", mcp.sse_app())
+        mcp_sub_app = mcp.streamable_http_app()
+        app.state.mcp_sub_app = mcp_sub_app
+        app.mount("", mcp_sub_app)
     else:
         import logging
         logging.getLogger(__name__).info(
