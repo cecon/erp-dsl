@@ -1,4 +1,4 @@
-"""Forge Worker — FastAPI service for the autonomous coding agent.
+"""Cappy Worker — FastAPI service for the autonomous coding agent.
 
 Endpoints:
   POST /task            — submit a coding task (returns task_id + SSE logs)
@@ -18,9 +18,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from agent import ForgeAgent
+from agent import CappyAgent
 
-app = FastAPI(title="Forge Worker", version="1.0.0")
+app = FastAPI(title="Cappy Worker", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,7 +38,7 @@ _task_queues: dict[str, asyncio.Queue] = {}
 
 class TaskRequest(BaseModel):
     task: str = Field(..., description="Natural language task description")
-    branch_prefix: str = Field("forge", description="Git branch prefix")
+    branch_prefix: str = Field("cappy", description="Git branch prefix")
 
 
 class TaskResponse(BaseModel):
@@ -50,7 +50,7 @@ class TaskResponse(BaseModel):
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "service": "forge-worker"}
+    return {"status": "ok", "service": "cappy-worker"}
 
 
 @app.post("/task", response_model=TaskResponse)
@@ -123,7 +123,7 @@ async def _run_agent(task_id: str, task: str, branch_prefix: str, queue: asyncio
         github_repo = os.environ["GITHUB_REPO"]
         base_branch = os.environ.get("GITHUB_BASE_BRANCH", "main")
 
-        agent = ForgeAgent(
+        agent = CappyAgent(
             github_token=github_token,
             github_repo=github_repo,
             base_branch=base_branch,

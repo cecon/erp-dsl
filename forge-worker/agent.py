@@ -1,13 +1,12 @@
-"""Forge Agent — autonomous coding loop.
+"""Cappy Agent — autonomous coding loop.
 
 Flow:
 1. Clone the repository (or pull if already cloned)
-2. Create a new branch: forge/{slug}
+2. Create a new branch: cappy/{slug}
 3. Loop: ask Gemini what to do → execute tool calls → repeat until done
 4. Commit all changes
 5. Push branch
-6. Open GitHub PR
-"""
+6. Open GitHub PR"""
 from __future__ import annotations
 
 import asyncio
@@ -27,7 +26,7 @@ from tools import ForgeTools
 
 # ── System prompt ─────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are Forge, an autonomous software engineering agent.
+SYSTEM_PROMPT = """You are Cappy, an autonomous software engineering agent.
 You operate inside a cloned Git repository and your job is to complete a coding task end-to-end.
 
 You have access to the following tools:
@@ -38,24 +37,27 @@ You have access to the following tools:
 - git_diff(): show current uncommitted changes
 - git_commit(message): commit all staged changes with the given message
 
-To call a tool, respond with a JSON block (and ONLY that, no extra text) like:
+== CRITICAL: RESPONSE FORMAT ==
+You MUST respond with ONLY a raw JSON object. No explanations, no markdown code fences, no text before or after.
+Any text outside the JSON will cause a parse failure and you will be asked to retry.
+
+To call a tool:
 {"tool": "read_file", "args": {"path": "README.md"}}
 
-When you are completely done with the task (all files written, tests pass if applicable),
-respond with exactly:
+When you are completely done (all files written, tests pass if applicable):
 {"tool": "done", "args": {"summary": "Brief summary of what was done"}}
 
-Rules:
-- Always explore the repository structure first with list_dir and read_file before making changes.
+== RULES ==
+- Always start by exploring the repository structure with list_dir, then read relevant files.
 - Make small, focused changes. Commit frequently.
 - If a bash command fails, analyze the output and try to fix the issue.
 - Never commit secrets, tokens, or credentials.
 - Write clear, conventional commit messages (feat:, fix:, chore:, etc).
 - Maximum 20 tool calls per task to avoid infinite loops.
-"""
+- NEVER write prose. Your every response must be valid JSON, nothing else."""
 
 
-class ForgeAgent:
+class CappyAgent:
     """Autonomous coding agent that clones a repo, makes changes, and opens a PR."""
 
     MAX_ITERATIONS = 20
@@ -77,7 +79,7 @@ class ForgeAgent:
 
     # ── Public API ────────────────────────────────────────────────────
 
-    async def run(self, task: str, branch_prefix: str = "forge") -> str:
+    async def run(self, task: str, branch_prefix: str = "cappy") -> str:
         """Execute the full agent loop and return the PR URL."""
         # 1. Prepare workspace
         repo_dir = await self._prepare_workspace()
@@ -93,7 +95,7 @@ class ForgeAgent:
         # 4. Commit any remaining changes
         diff = await tools.git_diff()
         if diff.strip():
-            await tools.git_commit(f"forge: apply task changes\n\n{summary}")
+            await tools.git_commit(f"cappy: apply task changes\n\n{summary}")
 
         # 5. Push
         await self._git_push(repo_dir, branch_name)
@@ -128,9 +130,16 @@ class ForgeAgent:
             # Parse tool call from response
             tool_call = self._parse_tool_call(response_text)
             if tool_call is None:
-                await self.emit("⚠️ Resposta inválida do Gemini, tentando continuar...")
+                await self.emit("⚠️ Resposta inválida do Gemini, solicitando reenvio...")
                 messages.append({"role": "model", "content": response_text})
-                messages.append({"role": "user", "content": "Please respond with a valid JSON tool call."})
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "ERROR: Your response was not valid JSON. "
+                        "You MUST respond with ONLY a raw JSON object, nothing else. "
+                        'Example: {"tool": "list_dir", "args": {"path": "."}}'
+                    ),
+                })
                 continue
 
             messages.append({"role": "model", "content": response_text})
@@ -299,7 +308,7 @@ class ForgeAgent:
 
     @staticmethod
     def _build_pr_body(task: str, summary: str) -> str:
-        return f"""## 🤖 Forge Agent — Tarefa Automática
+        return f"""## 🤖 Cappy Agent — Tarefa Automática
 
 ### Tarefa
 {task}
@@ -308,5 +317,5 @@ class ForgeAgent:
 {summary}
 
 ---
-*Este PR foi criado automaticamente pelo Forge Agent.*
+*Este PR foi criado automaticamente pelo Cappy Agent.*
 """

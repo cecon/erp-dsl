@@ -10,7 +10,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ComponentShowcase } from './pages/ComponentShowcase';
 import { useAuthStore } from './state/authStore';
 import { OttoProvider, useOttoContext } from './features/otto';
-import { ForgeProvider } from './features/forge/ForgeProvider';
+import { CappyProvider } from './features/cappy/CappyProvider';
 import { componentRegistry } from './core/engine/ComponentRegistry';
 import api from './services/api';
 import { useCallback } from 'react';
@@ -64,7 +64,7 @@ function AppLayout() {
 export default function App() {
   return (
     <BrowserRouter>
-      <ForgeProvider>
+      <CappyProvider>
         <OttoProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -78,7 +78,7 @@ export default function App() {
             />
           </Routes>
         </OttoProvider>
-      </ForgeProvider>
+      </CappyProvider>
     </BrowserRouter>
   );
 }
