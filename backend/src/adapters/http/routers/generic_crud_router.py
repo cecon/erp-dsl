@@ -168,6 +168,36 @@ def list_entities(
     return result
 
 
+@router.get("/{entity_name}/lookup")
+def lookup_entity(
+    entity_name: str,
+    value_field: str = "id",
+    label_field: str = "descricao",
+    limit: int = 200,
+    db: Session = Depends(get_tenant_db),
+) -> list[dict[str, str]]:
+    """Retorna a entidade formatada como [{value, label}] para uso em Selects.
+
+    Args:
+        entity_name: Nome da entidade (ex: 'tax_groups', 'operation_natures').
+        value_field: Campo a usar como `value` (padrão: 'id').
+        label_field: Campo a usar como `label` (padrão: 'descricao').
+        limit: Máximo de registros a retornar (padrão: 200).
+    """
+    schema = _resolve_schema(db, entity_name)
+    table_name = _get_table_name(schema, entity_name)
+    repo = GenericCrudRepository(db)
+    tenant_id = db.info["tenant_id"]
+    result = repo.list(table_name, tenant_id, offset=0, limit=limit)
+    options = []
+    for row in result.get("items", []):
+        val = row.get(value_field)
+        lbl = row.get(label_field)
+        if val is not None and lbl is not None:
+            options.append({"value": str(val), "label": str(lbl)})
+    return options
+
+
 @router.get("/{entity_name}/{entity_id}")
 def get_entity(
     entity_name: str,
@@ -273,4 +303,3 @@ def delete_entity(
         raise HTTPException(status_code=404, detail="Entity not found")
     db.commit()
     return {"detail": f"{entity_name} deleted"}
-

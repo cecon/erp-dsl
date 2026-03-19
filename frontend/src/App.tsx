@@ -10,6 +10,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ComponentShowcase } from './pages/ComponentShowcase';
 import { useAuthStore } from './state/authStore';
 import { OttoProvider, useOttoContext } from './features/otto';
+import { CappyProvider } from './features/cappy/CappyProvider';
 import { componentRegistry } from './core/engine/ComponentRegistry';
 import api from './services/api';
 import { useCallback } from 'react';
@@ -63,19 +64,21 @@ function AppLayout() {
 export default function App() {
   return (
     <BrowserRouter>
-      <OttoProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </OttoProvider>
+      <CappyProvider>
+        <OttoProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </OttoProvider>
+      </CappyProvider>
     </BrowserRouter>
   );
 }

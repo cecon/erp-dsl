@@ -55,5 +55,26 @@ services:
       backend:
         condition: service_healthy
 
+  forge-worker:
+    build: ./forge-worker
+    ports:
+      - "8020:8020"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_REPO=${GITHUB_REPO}
+      - GITHUB_BASE_BRANCH=${GITHUB_BASE_BRANCH:-main}
+    volumes:
+      - forge-workspace:/workspace
+      - gemini-creds:/root/.gemini  # credenciais OAuth do Gemini CLI
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8020/health\")'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
   pgdata:
+  forge-workspace:
+  gemini-creds:  # credenciais OAuth do Gemini CLI
