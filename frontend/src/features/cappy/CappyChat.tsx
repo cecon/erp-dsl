@@ -1,9 +1,9 @@
 /**
  * CappyChat — bridge between useCappy (SSE streaming) and ChatPanel (shared UI).
  *
- * Cada mensagem do Cappy é um log de ação do agente autônomo.
- * Usa o mesmo ChatPanel do @erp-dsl/chat-ui que o Otto usa,
- * mapeando os eventos SSE do agente para o formato de mensagens do chat.
+ * Cada iteração do agente é agrupada em uma única mensagem do assistente.
+ * Mensagens de status ("Iteração X") ficam como header,
+ * e os detalhes (thinking, tool calls, resultados) ficam em <details> expandível.
  *
  * O campo "task input" é o `onSendMessage`: o usuário digita a tarefa,
  * o Cappy executa e vai postando logs como mensagens do assistente.
@@ -13,74 +13,198 @@ import { useCallback, useEffect, useRef } from 'react';
 import { ChatPanel, useChatStore } from '@erp-dsl/chat-ui';
 import type { Message } from '@erp-dsl/chat-ui';
 import { useCappyContext } from './CappyProvider';
-import type { CappyMessage } from './types';
+import type { CappyCategory, CappyMessage } from './types';
+
+/* ── Category formatters ─────────────────────────────────── */
+
+const CATEGORY_EMOJI: Record<CappyCategory, string> = {
+  thinking: '🧠',
+  tool: '🔧',
+  tool_result: '📋',
+  git: '🌿',
+  status: '🔄',
+  warning: '⚠️',
+  error: '❌',
+  info: 'ℹ️',
+};
+
+function formatLogLine(msg: CappyMessage): string {
+  return msg.message;
+}
+
+/* ── Iteration grouping ──────────────────────────────────── */
+
+interface IterationGroup {
+  label: string;
+  messages: CappyMessage[];
+}
 
 /**
- * Converte uma CappyMessage (log do agente) para o formato Message do chat-ui.
+ * Group CappyMessages into:
+ * - preMessages: messages before any iteration (clone, branch, task accepted, etc.)
+ * - iterations: groups split on status messages containing 'Iteração'
+ * - postMessages: final messages after last iteration (done, error, PR)
  */
-function cappyToMessage(msg: CappyMessage): Message {
-  const isError = msg.type === 'error';
-  const isDone = msg.type === 'done';
+function groupMessages(messages: CappyMessage[]): {
+  preMessages: CappyMessage[];
+  iterations: IterationGroup[];
+  postMessages: CappyMessage[];
+} {
+  const preMessages: CappyMessage[] = [];
+  const iterations: IterationGroup[] = [];
+  const postMessages: CappyMessage[] = [];
+  let current: IterationGroup | null = null;
+  let foundDone = false;
 
-  let text = msg.message || '';
+  for (const msg of messages) {
+    const isIterationStart = msg.category === 'status' && msg.message.includes('Iteração');
+    const isDone = msg.category === 'status' && (
+      msg.message.includes('finalizou') || msg.message.includes('Pull Request')
+    );
+    const isError = msg.type === 'error' || msg.category === 'error';
 
-  // Mensagens de "done" com PR: adicionar texto especial
-  if (isDone && msg.prUrl) {
-    text = `✅ Tarefa concluída!\n\n📎 [Pull Request aberto](${msg.prUrl})`;
-  } else if (isDone) {
-    text = `✅ ${text || 'Tarefa concluída!'}`;
-  } else if (isError) {
-    text = `❌ ${text}`;
+    if (isDone || isError) {
+      foundDone = true;
+    }
+
+    if (isIterationStart) {
+      current = { label: msg.message, messages: [] };
+      iterations.push(current);
+    } else if (foundDone) {
+      postMessages.push(msg);
+    } else if (current) {
+      current.messages.push(msg);
+    } else {
+      preMessages.push(msg);
+    }
+  }
+  return { preMessages, iterations, postMessages };
+}
+
+/**
+ * Build a single markdown string for an iteration group.
+ * Shows a summary line + expandable details.
+ */
+function iterationToMarkdown(group: IterationGroup, isLatest: boolean): string {
+  // Summary: what tools were called
+  const toolCalls = group.messages.filter(m => m.category === 'tool');
+  const hasWarning = group.messages.some(m => m.category === 'warning');
+
+  let summary = group.label;
+  if (toolCalls.length > 0) {
+    summary += ` — ${toolCalls.length} tool call${toolCalls.length > 1 ? 's' : ''}`;
+  }
+  if (hasWarning) {
+    summary += ' ⚠️';
   }
 
-  return {
-    id: msg.id,
-    // logs do agente aparecem como "assistant"; a tarefa enviada pelo user aparece como "user"
-    role: 'assistant',
-    content: [{ type: 'text', text }],
-    timestamp: new Date(msg.timestamp),
-    isStreaming: false,
-  };
+  // Build detail lines
+  const detailLines = group.messages.map(msg => {
+    const emoji = CATEGORY_EMOJI[msg.category] || '';
+    return `${emoji} ${formatLogLine(msg)}`;
+  });
+
+  const detailsContent = detailLines.join('\n\n');
+
+  // Latest iteration is open by default; older ones are collapsed
+  if (isLatest) {
+    return `**${summary}**\n\n<details open>\n<summary>📝 Ver detalhes</summary>\n\n${detailsContent}\n\n</details>`;
+  }
+  return `**${summary}**\n\n<details>\n<summary>📝 Ver detalhes</summary>\n\n${detailsContent}\n\n</details>`;
 }
+
+/* ── Main Component ──────────────────────────────────────── */
 
 export function CappyChat() {
   const { close, messages, status, prUrl, send, reset } = useCappyContext();
+  void prUrl; // used implicitly via messages
 
   const { clearMessages } = useChatStore();
-  const prevLenRef = useRef(0);
+  const prevSnapshotRef = useRef<string>('');
   const lastTaskRef = useRef<string>('');
 
-  // Sync messages do useCappy → useChatStore
+  // Sync messages using grouped display
   useEffect(() => {
     const store = useChatStore.getState();
+    const { preMessages, iterations, postMessages } = groupMessages(messages);
 
-    // Reset completo se as mensagens diminuíram (nova tarefa)
-    if (messages.length < prevLenRef.current) {
-      store.clearMessages();
-      messages.forEach((msg) => store.addMessage(cappyToMessage(msg)));
-      prevLenRef.current = messages.length;
-      return;
-    }
+    // Build the target message list
+    const targetMessages: Message[] = [];
 
-    // Incremental: adiciona mensagens novas
-    if (messages.length > prevLenRef.current) {
-      const newMsgs = messages.slice(prevLenRef.current);
-      newMsgs.forEach((msg) => store.addMessage(cappyToMessage(msg)));
-    }
-
-    // Atualiza mensagens existentes (ex: status de streaming)
-    for (const msg of messages) {
-      const existing = store.messages.find((m) => m.id === msg.id);
-      if (existing) {
-        store.updateMessage(msg.id, {
-          content: cappyToMessage(msg).content,
-          isStreaming: false,
-        });
+    // Pre-iteration messages as individual assistant messages
+    for (const msg of preMessages) {
+      const isError = msg.type === 'error' || msg.category === 'error';
+      let text = msg.message || '';
+      if (msg.type === 'done' && msg.prUrl) {
+        text = `✅ Tarefa concluída!\n\n📎 [Pull Request aberto](${msg.prUrl})`;
+      } else if (isError) {
+        text = `❌ ${text}`;
       }
+
+      targetMessages.push({
+        id: msg.id,
+        role: 'assistant',
+        content: [{ type: 'text', text }],
+        timestamp: new Date(msg.timestamp),
+        isStreaming: false,
+      });
     }
 
-    prevLenRef.current = messages.length;
-  }, [messages]);
+    // Each iteration as a single grouped assistant message
+    for (let i = 0; i < iterations.length; i++) {
+      const group = iterations[i];
+      const isLatest = i === iterations.length - 1 && postMessages.length === 0;
+      const md = iterationToMarkdown(group, isLatest);
+
+      targetMessages.push({
+        id: `cappy-iter-${i}`,
+        role: 'assistant',
+        content: [{ type: 'text', text: md }],
+        timestamp: new Date(group.messages[0]?.timestamp || Date.now()),
+        isStreaming: isLatest && status === 'streaming',
+      });
+    }
+
+    // Post-messages (done, PR, error) as individual messages
+    for (const msg of postMessages) {
+      let text = msg.message || '';
+      if (msg.prUrl) {
+        text = `✅ Tarefa concluída!\n\n📎 [Pull Request aberto](${msg.prUrl})`;
+      } else if (msg.type === 'done') {
+        text = `✅ ${text || 'Tarefa concluída!'}`;
+      } else if (msg.type === 'error' || msg.category === 'error') {
+        text = `❌ ${text}`;
+      }
+      targetMessages.push({
+        id: msg.id,
+        role: 'assistant',
+        content: [{ type: 'text', text }],
+        timestamp: new Date(msg.timestamp),
+        isStreaming: false,
+      });
+    }
+
+    // Snapshot comparison to avoid unnecessary re-renders
+    const snapshot = JSON.stringify(targetMessages.map(m => ({ id: m.id, content: m.content })));
+    if (snapshot === prevSnapshotRef.current) return;
+    prevSnapshotRef.current = snapshot;
+
+    // Replace all messages in the store
+    store.clearMessages();
+
+    // Re-add the user task message if it existed
+    if (lastTaskRef.current) {
+      store.addMessage({
+        id: `cappy-user-task`,
+        role: 'user',
+        content: [{ type: 'text', text: lastTaskRef.current }],
+        timestamp: new Date(),
+        isStreaming: false,
+      });
+    }
+
+    targetMessages.forEach(m => store.addMessage(m));
+  }, [messages, status]);
 
   // Sync streaming status
   useEffect(() => {
@@ -93,26 +217,6 @@ export function CappyChat() {
       clearMessages();
     };
   }, [clearMessages]);
-
-  // Banner de PR no topo quando concluído
-  useEffect(() => {
-    if (prUrl) {
-      const store = useChatStore.getState();
-      // Encontra a mensagem de "done" e atualiza para mostrar o link
-      const doneMsg = [...store.messages]
-        .reverse()
-        .find((m: Message) =>
-          m.content.some((c) => c.type === 'text' && (c as { type: 'text'; text: string }).text.includes('Tarefa concluída'))
-        );
-      if (doneMsg && !doneMsg.content.some((c) => c.type === 'text' && (c as { type: 'text'; text: string }).text.includes(prUrl))) {
-        store.updateMessage(doneMsg.id, {
-          content: [
-            { type: 'text', text: `✅ Tarefa concluída!\n\n📎 [Pull Request aberto](${prUrl})` },
-          ],
-        });
-      }
-    }
-  }, [prUrl]);
 
   const handleSendMessage = useCallback(
     (text: string, _history: Array<{ role: string; content: string }>, assistantId: string) => {
@@ -148,7 +252,8 @@ export function CappyChat() {
   const handleNewChat = useCallback(() => {
     reset();
     useChatStore.getState().clearMessages();
-    prevLenRef.current = 0;
+    prevSnapshotRef.current = '';
+    lastTaskRef.current = '';
   }, [reset]);
 
   return (

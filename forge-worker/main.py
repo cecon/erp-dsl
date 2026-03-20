@@ -94,7 +94,10 @@ async def _sse_generator(task_id: str) -> AsyncGenerator[str, None]:
         # Task already finished — replay logs
         task = _tasks[task_id]
         for log in task["logs"]:
-            yield f"data: {json.dumps({'type': 'log', 'message': log})}\n\n"
+            if isinstance(log, dict):
+                yield f"data: {json.dumps({'type': 'log', 'message': log['message'], 'category': log.get('category', 'info')})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'log', 'message': log})}\n\n"
         yield f"data: {json.dumps({'type': 'done', 'status': task['status'], 'pr_url': task['pr_url']})}\n\n"
         return
 
@@ -113,9 +116,9 @@ async def _run_agent(task_id: str, task: str, branch_prefix: str, queue: asyncio
     """Run the ForgeAgent and pipe logs to the SSE queue."""
     _tasks[task_id]["status"] = "running"
 
-    async def emit(msg: str) -> None:
-        event = {"type": "log", "message": msg}
-        _tasks[task_id]["logs"].append(msg)
+    async def emit(msg: str, category: str = "info") -> None:
+        event = {"type": "log", "message": msg, "category": category}
+        _tasks[task_id]["logs"].append({"message": msg, "category": category})
         await queue.put(event)
 
     try:

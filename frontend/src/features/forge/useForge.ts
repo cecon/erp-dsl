@@ -43,6 +43,7 @@ export function useForge(): UseForgeReturn {
     const msg: ForgeMessage = {
       id: nextId(),
       type: event.type,
+      category: event.category || 'info',
       message: event.message || '',
       timestamp: Date.now(),
       prUrl: event.pr_url,
@@ -64,6 +65,7 @@ export function useForge(): UseForgeReturn {
       {
         id: nextId(),
         type: 'log',
+        category: 'status',
         message: `🚀 Iniciando tarefa: ${task}`,
         timestamp: Date.now(),
       },

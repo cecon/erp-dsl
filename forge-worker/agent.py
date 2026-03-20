@@ -68,7 +68,7 @@ class CappyAgent:
         github_repo: str,
         base_branch: str,
         workspace_dir: str,
-        emit: Callable[[str], Awaitable[None]],
+        emit: Callable[[str, str], Awaitable[None]],
     ) -> None:
         self.github_token = github_token
         self.github_repo = github_repo  # "org/repo"
@@ -95,6 +95,7 @@ class CappyAgent:
         # 4. Commit any remaining changes
         diff = await tools.git_diff()
         if diff.strip():
+            await self.emit("📦 Commitando alterações restantes...", "git")
             await tools.git_commit(f"cappy: apply task changes\n\n{summary}")
 
         # 5. Push
@@ -108,7 +109,7 @@ class CappyAgent:
             body=self._build_pr_body(task, summary),
         )
 
-        await self.emit(f"✅ Pull Request aberto: {pr_url}")
+        await self.emit(f"✅ Pull Request aberto: {pr_url}", "status")
         return pr_url
 
     # ── Agent loop ────────────────────────────────────────────────────
@@ -122,15 +123,16 @@ class CappyAgent:
 
         summary = "Task completed."
         for i in range(self.MAX_ITERATIONS):
-            await self.emit(f"🔄 Iteração {i + 1}/{self.MAX_ITERATIONS}")
+            await self.emit(f"🔄 Iteração {i + 1}/{self.MAX_ITERATIONS}", "status")
 
+            await self.emit("🧠 Cappy está pensando...", "thinking")
             response_text = await self._call_gemini(messages)
-            await self.emit(f"🧠 Gemini: {response_text[:200]}{'...' if len(response_text) > 200 else ''}")
+            await self.emit(f"💬 Resposta: {response_text[:500]}{'...' if len(response_text) > 500 else ''}", "thinking")
 
             # Parse tool call from response
             tool_call = self._parse_tool_call(response_text)
             if tool_call is None:
-                await self.emit("⚠️ Resposta inválida do Gemini, solicitando reenvio...")
+                await self.emit("⚠️ Resposta inválida do Gemini, solicitando reenvio...", "warning")
                 messages.append({"role": "model", "content": response_text})
                 messages.append({
                     "role": "user",
@@ -146,13 +148,14 @@ class CappyAgent:
 
             if tool_call["tool"] == "done":
                 summary = tool_call.get("args", {}).get("summary", "Task completed.")
-                await self.emit(f"✅ Agente finalizou: {summary}")
+                await self.emit(f"✅ Agente finalizou: {summary}", "status")
                 break
 
             # Execute tool
             result = await self._execute_tool(tool_call, tools)
             observation = f"Tool result: {result}"
-            await self.emit(f"🔧 {tool_call['tool']}: {str(result)[:300]}")
+            await self.emit(f"🔧 {tool_call['tool']}({', '.join(f'{k}={repr(v)[:60]}' for k, v in tool_call.get('args', {}).items())})", "tool")
+            await self.emit(f"📋 Resultado: {str(result)[:500]}{'...' if len(str(result)) > 500 else ''}", "tool_result")
             messages.append({"role": "user", "content": observation})
 
         return summary
@@ -194,19 +197,19 @@ class CappyAgent:
         clone_url = f"https://{self.github_token}@github.com/{self.github_repo}.git"
 
         if repo_dir.exists():
-            await self.emit(f"🔄 Atualizando repositório existente em {repo_dir}")
+            await self.emit(f"🔄 Atualizando repositório existente em {repo_dir}", "git")
             await self._run_git(repo_dir, ["fetch", "origin"])
             await self._run_git(repo_dir, ["checkout", self.base_branch])
             await self._run_git(repo_dir, ["reset", "--hard", f"origin/{self.base_branch}"])
         else:
-            await self.emit(f"📥 Clonando {self.github_repo} em {repo_dir}")
+            await self.emit(f"📥 Clonando {self.github_repo} em {repo_dir}", "git")
             await self._run_git(self.workspace_dir, ["clone", "--depth=1", clone_url, repo_name])
 
         return repo_dir
 
     async def _create_branch(self, repo_dir: Path, branch_name: str) -> None:
         """Create and checkout a new branch."""
-        await self.emit(f"🌿 Criando branch {branch_name}")
+        await self.emit(f"🌿 Criando branch {branch_name}", "git")
         # Delete local branch if exists
         try:
             await self._run_git(repo_dir, ["branch", "-D", branch_name])
@@ -216,7 +219,7 @@ class CappyAgent:
 
     async def _git_push(self, repo_dir: Path, branch_name: str) -> None:
         """Push the branch to origin."""
-        await self.emit(f"📤 Fazendo push da branch {branch_name}")
+        await self.emit(f"📤 Fazendo push da branch {branch_name}", "git")
         # Set remote URL with token for auth
         remote_url = f"https://{self.github_token}@github.com/{self.github_repo}.git"
         await self._run_git(repo_dir, ["remote", "set-url", "origin", remote_url])
@@ -237,12 +240,24 @@ class CappyAgent:
 
     # ── Gemini via CLI ────────────────────────────────────────────────
 
+    # Max characters per tool-result message kept in history
+    _MAX_RESULT_CHARS = 2000
+    # Max conversation exchanges to keep (system + task always included)
+    _MAX_HISTORY_TAIL = 10
+
     async def _call_gemini(self, messages: list[dict]) -> str:
-        """Call Gemini using the CLI (gemini -p ...) with OAuth credentials."""
-        # Build a single prompt from the message list
-        # The CLI doesn't support multi-turn natively, so we serialize the history
+        """Call Gemini using the CLI (gemini -p ...) with OAuth credentials.
+
+        Optimizations to avoid timeouts:
+        - Truncate tool results in history to _MAX_RESULT_CHARS
+        - Keep only the last _MAX_HISTORY_TAIL messages (plus system + task)
+        - Use stdin pipe instead of -p arg to avoid OS arg length limits
+        """
+        # Build a compact message list
+        compact = self._compact_history(messages)
+
         prompt_parts = []
-        for msg in messages:
+        for msg in compact:
             role = msg["role"]
             content = msg["content"]
             if role == "system":
@@ -254,9 +269,11 @@ class CappyAgent:
 
         full_prompt = "\n\n".join(prompt_parts)
 
+        # Use stdin pipe instead of -p to avoid OS arg length limits
         process = await asyncio.create_subprocess_exec(
             "gemini",
-            "-p", full_prompt,
+            "-p", "-",  # read prompt from stdin
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             env={
@@ -267,16 +284,50 @@ class CappyAgent:
             },
         )
         try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=120.0)
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(input=full_prompt.encode("utf-8")),
+                timeout=600.0,
+            )
         except asyncio.TimeoutError:
             process.kill()
-            raise RuntimeError("Gemini CLI timed out after 120s")
+            raise RuntimeError("Gemini CLI timed out after 600s")
 
         if process.returncode != 0:
             err = stderr.decode(errors="replace")
             raise RuntimeError(f"Gemini CLI error: {err}")
 
         return stdout.decode(errors="replace").strip()
+
+    def _compact_history(self, messages: list[dict]) -> list[dict]:
+        """Compact message history to avoid oversized prompts.
+
+        - Always keeps system prompt (index 0) and task (index 1)
+        - Truncates tool results to _MAX_RESULT_CHARS
+        - Keeps only the last _MAX_HISTORY_TAIL messages after system+task
+        """
+        if len(messages) <= 2:
+            return messages
+
+        # Always keep system + task
+        head = messages[:2]
+        tail = messages[2:]
+
+        # Truncate tail
+        if len(tail) > self._MAX_HISTORY_TAIL:
+            tail = tail[-self._MAX_HISTORY_TAIL:]
+
+        # Truncate tool results
+        compact_tail = []
+        for msg in tail:
+            content = msg["content"]
+            if msg["role"] == "user" and content.startswith("Tool result:"):
+                if len(content) > self._MAX_RESULT_CHARS:
+                    content = content[:self._MAX_RESULT_CHARS] + "\n... [truncated]"
+                compact_tail.append({**msg, "content": content})
+            else:
+                compact_tail.append(msg)
+
+        return head + compact_tail
 
     # ── Helpers ───────────────────────────────────────────────────────
 

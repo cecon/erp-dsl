@@ -43,6 +43,7 @@ export function useCappy(): UseCappyReturn {
     const msg: CappyMessage = {
       id: nextId(),
       type: event.type,
+      category: event.category || 'info',
       message: event.message || '',
       timestamp: Date.now(),
       prUrl: event.pr_url,
@@ -63,6 +64,7 @@ export function useCappy(): UseCappyReturn {
       {
         id: nextId(),
         type: 'log',
+        category: 'status',
         message: `🚀 Iniciando tarefa: ${task}`,
         timestamp: Date.now(),
       },
