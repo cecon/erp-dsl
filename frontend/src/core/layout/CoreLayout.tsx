@@ -5,9 +5,7 @@ import { Sidebar } from '../../components/layout/Sidebar';
 import { ThemeDrawer } from '../../components/layout/ThemeDrawer';
 import { OttoChat } from '../../features/otto/OttoChat';
 import { useOttoContext } from '../../features/otto';
-import { CappyFab } from '../../features/cappy/CappyFab';
-import { CappyChat } from '../../features/cappy/CappyChat';
-import { useCappyContext } from '../../features/cappy/CappyProvider';
+
 import { useThemeStore } from '../../state/themeStore';
 
 interface CoreLayoutProps {
@@ -48,7 +46,6 @@ export function CoreLayout({ children }: CoreLayoutProps) {
   const primaryColor = useThemeStore((s) => s.primaryColor);
   const navWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
   const { opened: ottoOpened } = useOttoContext();
-  const { opened: cappyOpened } = useCappyContext();
 
   const [asideWidth, setAsideWidth] = useState(getStoredWidth);
   const isDragging = useRef(false);
@@ -97,9 +94,9 @@ export function CoreLayout({ children }: CoreLayoutProps) {
       header={{ height: 56 }}
       navbar={{ width: navWidth, breakpoint: 'sm' }}
       aside={{
-        width: (ottoOpened || cappyOpened) ? asideWidth : 0,
+        width: ottoOpened ? asideWidth : 0,
         breakpoint: 'sm',
-        collapsed: { desktop: !ottoOpened && !cappyOpened, mobile: !ottoOpened && !cappyOpened },
+        collapsed: { desktop: !ottoOpened, mobile: !ottoOpened },
       }}
       padding="xl"
       transitionDuration={200}
@@ -169,38 +166,7 @@ export function CoreLayout({ children }: CoreLayoutProps) {
         </AppShell.Aside>
       )}
 
-      {/* Cappy Agent — Aside autônomo de programação */}
-      {cappyOpened && !ottoOpened && (
-        <AppShell.Aside>
-          <div
-            onMouseDown={handleMouseDown}
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 5,
-              cursor: 'col-resize',
-              zIndex: 10,
-              background: 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              (e.target as HTMLElement).style.background = '#ea580c';
-              (e.target as HTMLElement).style.opacity = '0.5';
-            }}
-            onMouseLeave={(e) => {
-              if (!isDragging.current) {
-                (e.target as HTMLElement).style.background = 'transparent';
-                (e.target as HTMLElement).style.opacity = '1';
-              }
-            }}
-          />
-          <CappyChat />
-        </AppShell.Aside>
-      )}
-
       {/* FABs */}
-      <CappyFab />
       <ThemeDrawer />
     </AppShell>
   );
